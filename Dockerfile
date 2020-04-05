@@ -30,7 +30,6 @@ apt-get install --no-install-recommends -y \
 ##################
 RUN apt-get install -y python3 python3-pip python3-dev \
   && cd /usr/local/bin \
-  && ln -s /usr/bin/python3 python \
   && pip3 install --upgrade pip
 
 RUN pip3 install numpy pylint
@@ -93,6 +92,39 @@ RUN apt-get update && \
 
 RUN pip3 install pyrealsense2
 
+#####################
+# Install Ardupilot #
+#####################
+WORKDIR /
 
+ENV USER=${USERNAME}
+
+RUN git clone https://github.com/ArduPilot/ardupilot
+WORKDIR "/ardupilot"
+RUN git checkout tags/${ARDUPILOT_TAG} && \ 
+	git submodule update --init --recursive
+
+WORKDIR "/"
+RUN chown -R ${USERNAME} ardupilot
+
+RUN apt-get install -y tzdata &&\
+ln -fs /usr/share/zoneinfo/Europe/London /etc/localtime && \
+dpkg-reconfigure --frontend noninteractive tzdata
+
+RUN apt-get install -y python python-pip && pip install --upgrade pip
+RUN pip2 install -U future lxml pymavlink mavproxy pexpect
+
+RUN bash -c "DEBIAN_FRONTEND=noninteractive && ./ardupilot/Tools/environment_install/install-prereqs-ubuntu.sh -y"
+
+#USER $USERNAME
+ENV CCACHE_MAXSIZE=1G
+ENV PATH /usr/lib/ccache:/ardupilot/Tools:${PATH}
+ENV PATH /ardupilot/Tools/autotest:${PATH}
+ENV PATH /ardupilot/.local/bin:$PATH
+
+# RUN pip3 install future pexpect
+
+WORKDIR "/ardupilot"
+RUN ./waf configure --board sitl && ./waf copter -j$(nproc)
 
 
