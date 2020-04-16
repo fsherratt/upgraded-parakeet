@@ -25,31 +25,36 @@ class logging_interface:
     def message_callback(self, data, verbosity=VERBOSE):
         timestamp = time.time()
 
-        if self.filter_incoming(verbosity):
-            self.queue_message(timestamp, data)
-            self._log_queue_event.set()
+        if self._filter_incoming(verbosity):
+            self._queue_message(timestamp, data)
+            self._set_message_event()
 
-    def filter_incoming(self, verbosity) -> bool:
+    def _filter_incoming(self, verbosity) -> bool:
         return verbosity <= self.verbosity
 
-    def queue_message(self, time, data):
+    def _queue_message(self, time, data):
         self._loq_queue.put((time, data))
 
     def log_loop(self):
         while self._loop_running:
-            self.wait_for_message()
+            self._wait_for_message_event()
 
-            while True:
-                msg = self.get_message()
+            msg = self._get_message()
 
-                if msg is None:
-                    break
+            if msg is None:
+                self._clear_message_event()
+                break
 
-                self.save_to_file(msg)
-
-    def wait_for_message(self):
-        self._log_queue_event.wait()
+            self.save_to_file(msg)
+    
+    def _clear_message_event(self):
         self._log_queue_event.clear()
+
+    def _set_message_event(self):
+        self._log_queue_event.set()
+
+    def _wait_for_message_event(self):
+        self._log_queue_event.wait()
 
     def start_logging_loop(self):
         self._log_thread = threading.Thread(target=self.log_loop, daemon=True)
@@ -57,8 +62,9 @@ class logging_interface:
 
     def stop_logging_loop(self):
         self._loop_running = False
+        self._set_message_event()
 
-    def get_message(self):
+    def _get_message(self):
         try:
             return self._loq_queue.get_nowait()
         except queue.Empty:
