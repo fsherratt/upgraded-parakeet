@@ -96,6 +96,16 @@ class TestTemplate(TestCase):
 
         mock_clear.assert_called()
 
+    @mock.patch('modules.data_logger.logging_interface.save_to_file')
+    def test_loop_stays_open_after_message(self, mock_save):
+        self.logObj.start_logging_loop()
+        self.logObj.message_callback('data', self.logObj.WARNING)
+        
+        import time
+        time.sleep(0.1)
+
+        self.assertTrue(self.logObj._log_thread.is_alive())
+
     @mock.patch('modules.data_logger.logging_interface._get_message', return_value=None)
     @mock.patch('modules.data_logger.logging_interface.save_to_file')
     def test_empty_message_not_passed_to_save(self, mock_save, mock_get):
