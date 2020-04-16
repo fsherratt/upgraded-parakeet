@@ -35,7 +35,12 @@ class udp_proxy:
 
     def SendMessage( self, message:str ):
         print( f"Sending message : {message} to addr : {self._ip_addr}, port : {self._port}" )
-        self.sock.sendto( message.encode(), ( self._ip_addr, self._port ) )
+
+        #handling for bytes being passed in
+        if isinstance( message, str ):
+            message = message.encode()
+
+        self.sock.sendto( message, ( self._ip_addr, self._port ) )
 
 if __name__ == "__main__":
     proxy = udp_proxy( DEFAULT_IP_ADDR, DEFAULT_PORT )
