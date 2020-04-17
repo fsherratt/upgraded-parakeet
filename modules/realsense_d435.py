@@ -1,14 +1,9 @@
 import pyrealsense2 as rs
 import traceback
 import sys
-import scipy
+import time
 
 import numpy as np
-from scipy import signal
-
-class unexpectedDisconnect( Exception):
-    # Camera unexpectably disconnected
-    pass
 
 class rs_d435:
     min_range = 0.1
@@ -74,7 +69,8 @@ class rs_d435:
 
         self.intrin = profile.get_stream( rs.stream.depth ).as_video_stream_profile().get_intrinsics()
         self.scale = profile.get_device().first_depth_sensor().get_depth_scale()
-
+        self.scale *= 1000 # Convert from mm to m
+        
         self.FOV = rs.rs2_fov( self.intrin )
         self.FOV = np.deg2rad( self.FOV )
 
@@ -94,9 +90,6 @@ class rs_d435:
         self.xDeprojectMatrix = np.tile( self.xDeprojectRow, (self.height, 1) )
         self.yDeprojectMatrix = np.tile( self.yDeprojectCol, (self.width, 1) ).transpose()
 
-        # self.xDeprojectMatrix = self.shrink(self.xDeprojectMatrix)
-        # self.yDeprojectMatrix = self.shrink(self.yDeprojectMatrix)
-
     # --------------------------------------------------------------------------
     # getFrame
     # Retrieve a depth frame with scale metres from camera
@@ -108,25 +101,18 @@ class rs_d435:
         # Get depth data
         depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
-        if not depth_frame:
+        try:
+            depth_points = depth_frame.get_data()
+            color_image = color_frame.get_data()
+        except AttributeError:
             return None
 
-        depth_points = np.asarray( depth_frame.get_data(), dtype=np.float32 )
-        color_image = np.asanyarray(color_frame.get_data(), dtype=np.uint8)
+        depth_points = np.asarray(depth_points, dtype=np.float32)
+        color_image = np.asanyarray(color_image, dtype=np.uint8)
 
-        # depth_points = self.shrink(depth_points)
-        return depth_points, color_image
+        depth_points = self.deproject_frame(depth_points)
 
-    # --------------------------------------------------------------------------
-    # shrink
-    # Shrink X, Y and Z by a factor so processing is faster
-    # --------------------------------------------------------------------------
-    def shrink(self, frame, factor=4):
-        frame = signal.decimate(frame, factor, n=None, ftype='iir', axis=1, zero_phase=True)
-        frame = signal.decimate(frame, factor, n=None, ftype='iir', axis=0, zero_phase=True)
-
-        return frame
-
+        return (time.time(), depth_points, color_image)
 
     # --------------------------------------------------------------------------
     # deproject_frame
@@ -139,17 +125,7 @@ class rs_d435:
         X = np.multiply( frame, self.xDeprojectMatrix )
         Y = np.multiply( frame, self.yDeprojectMatrix )
 
-        Z = np.reshape(Z, (-1))
-        X = np.reshape(X, (-1))
-        Y = np.reshape(Y, (-1))
-
-        # Conversion into aero-reference frame
-        points = np.column_stack( (Z,X,Y) )
-
-        inRange = np.where( (points[:,0] > self.min_range) & (points[:,0] < self.max_range) )
-        points = points[inRange]
-
-        return points
+        return [X, Y, Z]
 
 if __name__ == "__main__":
     import cv2
@@ -159,9 +135,10 @@ if __name__ == "__main__":
     with d435Obj:
         while True:
             frame = d435Obj.getFrame()
-            threeDFrame = d435Obj.deproject_frame(frame)
 
-            cv2.imshow('frameX', threeDFrame[0,:,:])
-            cv2.imshow('frameY', threeDFrame[1,:,:])
-            cv2.imshow('frameZ', threeDFrame[2,:,:])
+            depth = frame[1][2]
+            depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=0.03), cv2.COLORMAP_JET)
+
+            cv2.imshow('depth_frame', depth)
+            cv2.imshow('color_frame', frame[2])
             cv2.waitKey(1)
