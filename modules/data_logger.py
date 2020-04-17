@@ -4,30 +4,19 @@ import sys
 import time
 
 class logging_interface:
-    DEBUG = 3
-    VERBOSE = 2
-    NOTICE = 1
-    WARNING = 0
-    OFF = -1
-
     def __init__(self):
         self._loq_queue = queue.Queue()
         self._log_queue_event = threading.Event()
 
-        self.verbosity = 0
-
         self._loop_running = True
 
     # Called by message broker
-    def message_callback(self, data, verbosity):
+    def message_callback(self, data):
         timestamp = time.time()
 
-        if self._filter_incoming(verbosity):
+        if self._loop_running:
             self._queue_message(timestamp, data)
             self._set_message_event()
-
-    def _filter_incoming(self, verbosity) -> bool:
-        return verbosity <= self.verbosity
 
     def _queue_message(self, time, data):
         self._loq_queue.put((time, data))
@@ -78,9 +67,7 @@ if __name__ == "__main__":
     logObj.start_logging_loop()
 
     for i in range(10):
-        startTime = time.time()
-        logObj.message_callback(time.time(), logObj.WARNING)
-        print(time.time() - startTime)
+        logObj.message_callback(i)
         time.sleep(1)
 
     logObj.stop_logging_loop()
