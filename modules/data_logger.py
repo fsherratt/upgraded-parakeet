@@ -3,6 +3,8 @@ import queue
 import sys
 import time
 
+import logging
+
 class logging_interface:
     def __init__(self):
         self._loq_queue = queue.Queue()
@@ -18,8 +20,8 @@ class logging_interface:
             self._queue_message(timestamp, data)
             self._set_message_event()
 
-    def _queue_message(self, time, data):
-        self._loq_queue.put((time, data))
+    def _queue_message(self, timestamp, data):
+        self._loq_queue.put((timestamp, data))
 
     def log_loop(self):
         while self._loop_running:
@@ -61,9 +63,34 @@ class logging_interface:
         # Save message to file using abstracted save method
         print(msg, file=sys.stdout)
 
+class telemetry_log(logging_interface):
+    def __init__(self, log_name, print_to_console=True):
+        super().__init__()
+
+        self.logger = logging.getLogger(log_name)
+        self.logger.setLevel(logging.DEBUG) # log everything
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        log_directory = 'logs/'
+        log_filename = log_directory+ log_name + '_' + time.strftime("%Y%m%d-%H%M%S") + '.log'
+
+        fh = logging.FileHandler(log_filename)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+
+        if print_to_console:
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            ch.setFormatter(formatter)  
+            self.logger.addHandler(ch)
+
+    def save_to_file(self, msg):
+        self.logger.debug(msg[1])
 
 if __name__ == "__main__":
-    logObj = logging_interface()
+    logObj = telemetry_log('telemetry')
     logObj.start_logging_loop()
 
     for i in range(10):
