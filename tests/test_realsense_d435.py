@@ -5,10 +5,10 @@ from modules import realsense_d435
 
 class TestTemplate(unittest.TestCase):
     def setUp(self):
-        pass
+        self.rs = realsense_d435.rs_d435()
     
     def tearDown(self):
         pass
 
-    def test_example_assert(self):
-        pass
+    def test_import_success(self):
+        self.assertTrue(True)
