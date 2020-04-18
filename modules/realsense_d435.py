@@ -9,11 +9,13 @@ class rs_d435:
     min_range = 0.1
     max_range = 10
 
-    def __init__(self, width=640, height=480, framerate=30):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.depth_width = 640
+        self.depth_height = 480
+        self.rgb_width = 640
+        self.rgb_height = 480
 
-        self.framerate = framerate
+        self.framerate = 30
 
         self.intrin = None
         self.scale = 1
@@ -40,9 +42,14 @@ class rs_d435:
         self.pipe = rs.pipeline()
 
         self.cfg = rs.config()
-        self.cfg.enable_stream( rs.stream.depth, self.width, self.height, \
-                                rs.format.z16, self.framerate )
-        self.cfg.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, self.framerate)
+        self.cfg.enable_stream( rs.stream.depth, 
+                                self.depth_width, self.depth_height,
+                                rs.format.z16, 
+                                self.framerate )
+        self.cfg.enable_stream(rs.stream.color, 
+                                self.rgb_width, self.rgb_height, 
+                                rs.format.bgr8, 
+                                self.framerate)
 
         self.profile = self.pipe.start( self.cfg  )
 
@@ -67,10 +74,16 @@ class rs_d435:
     def getIntrinsics( self ):
         profile = self.pipe.get_active_profile()
 
-        self.intrin = profile.get_stream( rs.stream.depth ).as_video_stream_profile().get_intrinsics()
-        self.scale = profile.get_device().first_depth_sensor().get_depth_scale()
+        self.intrin = profile.get_stream( rs.stream.depth ) \
+                        .as_video_stream_profile() \
+                        .get_intrinsics()
+
+        self.scale = profile.get_device() \
+                        .first_depth_sensor() \
+                        .get_depth_scale()
+                        
         self.scale *= 1000 # Convert from mm to m
-        
+
         self.FOV = rs.rs2_fov( self.intrin )
         self.FOV = np.deg2rad( self.FOV )
 
@@ -83,12 +96,12 @@ class rs_d435:
         self.getIntrinsics()
         
         # Create deproject row/column vector
-        self.xDeprojectRow = (np.arange( self.width ) - self.intrin.ppx) / self.intrin.fx
-        self.yDeprojectCol = (np.arange( self.height ) - self.intrin.ppy) / self.intrin.fy
+        self.xDeprojectRow = (np.arange( self.depth_width ) - self.intrin.ppx) / self.intrin.fx
+        self.yDeprojectCol = (np.arange( self.depth_height ) - self.intrin.ppy) / self.intrin.fy
 
         # Tile across full matrix height/width
-        self.xDeprojectMatrix = np.tile( self.xDeprojectRow, (self.height, 1) )
-        self.yDeprojectMatrix = np.tile( self.yDeprojectCol, (self.width, 1) ).transpose()
+        self.xDeprojectMatrix = np.tile( self.xDeprojectRow, (self.depth_height, 1) )
+        self.yDeprojectMatrix = np.tile( self.yDeprojectCol, (self.depth_width, 1) ).transpose()
 
     # --------------------------------------------------------------------------
     # getFrame
@@ -130,7 +143,7 @@ class rs_d435:
 if __name__ == "__main__":
     import cv2
 
-    d435Obj = rs_d435( framerate = 30 )
+    d435Obj = rs_d435()
 
     with d435Obj:
         while True:
