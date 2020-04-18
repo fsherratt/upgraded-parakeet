@@ -12,6 +12,12 @@ class rs_d435:
 
     def __init__(self):
         self.depth_width = 640
+        self.depth_height = 480
+
+        self.rgb_width = 640
+        self.rgb_height = 480
+
+        self.framerate = 30
 
         self.intrin = None
         self.scale = 1
@@ -107,12 +113,13 @@ class rs_d435:
     def get_frame(self):
         frames = self.pipe.wait_for_frames()
 
-        # Get depth data
         depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
+
         try:
             depth_points = depth_frame.get_data()
             color_image = color_frame.get_data()
+            # Some error about no data in frame
         except AttributeError:
             return None
 

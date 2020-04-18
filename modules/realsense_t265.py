@@ -33,17 +33,13 @@ class rs_t265:
         print('rs_t265:T265 Connection Closed')
 
     def get_frame(self) -> tuple:
-        try:
-            frames = self.pipe.wait_for_frames()
-        except RuntimeError:
-            # Camera has probably disconnected
-            traceback.print_exc(file=sys.stdout)
-
+        frames = self.pipe.wait_for_frames()
         pose = frames.get_pose_frame()
 
         try:
             data = pose.get_pose_data()
-        except ValueError:
+        except AttributeError:
+            # Some error about no data in frame
             return None
 
         pos = [data.translation.x, 
