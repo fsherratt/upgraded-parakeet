@@ -7,9 +7,6 @@ import numpy as np
 
 
 class rs_d435:
-    min_range = 0.1
-    max_range = 10
-
     def __init__(self):
         self.depth_width = 640
         self.depth_height = 480
@@ -18,6 +15,9 @@ class rs_d435:
         self.rgb_height = 480
 
         self.framerate = 30
+
+        self.min_range = 0.1
+        self.max_range = 10
 
         self.intrin = None
         self.scale = 1
@@ -84,8 +84,6 @@ class rs_d435:
                         .first_depth_sensor() \
                         .get_depth_scale()
                         
-        self.scale *= 1000 # Convert from mm to m
-
         self.FOV = rs.rs2_fov( self.intrin )
         self.FOV = np.deg2rad( self.FOV )
 
@@ -126,17 +124,43 @@ class rs_d435:
         depth_points = np.asarray(depth_points, dtype=np.float32)
         color_image = np.asanyarray(color_image, dtype=np.uint8)
 
-        depth_points = self.deproject_frame(depth_points)
+        depth_points = self.process_depth_frame(depth_points)
 
         return (time.time(), depth_points, color_image)
+
+    # --------------------------------------------------------------------------
+    # process_depth_frame
+    # Perform data pre-processing to depth frame
+    # --------------------------------------------------------------------------
+    def process_depth_frame(self, frame):
+        frame = self.scale_depth_frame(frame)
+        frame = self.limit_depth_range(frame)
+        frame = self.deproject_frame(frame)
+
+        return frame
+
+    # --------------------------------------------------------------------------
+    # scale_depth_frame
+    # Scale the depth output to meteres
+    # --------------------------------------------------------------------------
+    def scale_depth_frame(self, frame):
+        return frame * self.scale
+
+    # --------------------------------------------------------------------------
+    # limit_depth_range
+    # Limit the maximum/minimum range of the depth camera
+    # --------------------------------------------------------------------------
+    def limit_depth_range(self, frame):
+        frame[ frame > self.max_range ] = np.nan
+        frame[ frame < self.min_range ] = np.nan
+        return frame
 
     # --------------------------------------------------------------------------
     # deproject_frame
     # Conversion depth frame to 3D local coordiate system in meters
     # return [[x,y,z]] coordinates of depth pixels
     # --------------------------------------------------------------------------
-    def deproject_frame( self, frame ):
-        frame = frame * self.scale
+    def deproject_frame( self, frame ):       
         Z = frame
         X = np.multiply( frame, self.x_deproject_matrix )
         Y = np.multiply( frame, self.y_deproject_matrix )
@@ -153,8 +177,9 @@ if __name__ == "__main__":
             frame = d435Obj.get_frame()
 
             depth = frame[1][2]
-            depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=0.03), cv2.COLORMAP_JET)
+            depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=100), cv2.COLORMAP_JET)
 
+            # depth = np.nan_to_num(depth, nan=1)
             cv2.imshow('depth_frame', depth)
             cv2.imshow('color_frame', frame[2])
             cv2.waitKey(1)
