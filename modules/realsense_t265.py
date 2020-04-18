@@ -11,15 +11,15 @@ class rs_t265:
         self.cfg = None
 
     def __enter__(self):
-        self.openConnection()
+        self.open_connection()
 
     def __exit__(self, exception_type, exception_value, traceback):
         if traceback:
             print(traceback.tb_frame)
 
-        self.closeConnection()
+        self.close_connection()
 
-    def openConnection(self):
+    def open_connection(self):
         self.pipe = rs.pipeline()
 
         self.cfg = rs.config()
@@ -28,11 +28,11 @@ class rs_t265:
         self.pipe.start(self.cfg)
         print('rs_t265:T265 Connection Open')
 
-    def closeConnection(self):
+    def close_connection(self):
         self.pipe.stop()
         print('rs_t265:T265 Connection Closed')
 
-    def getFrame(self) -> tuple:
+    def get_frame(self) -> tuple:
         try:
             frames = self.pipe.wait_for_frames()
         except RuntimeError:
@@ -57,17 +57,19 @@ class rs_t265:
 
         conf = data.tracker_confidence
 
+        quat = self.convert_coordinate_frame(quat)
+
         return (time.time(), pos, quat, conf)
 
+    def convert_coordinate_frame(self, quat) -> list:
+        return quat
 
 if __name__ == "__main__":   
     t265Obj = rs_t265()
 
     with t265Obj:
         while True:
-            data_frame = t265Obj.getFrame()
-
-            # print(i, pos, conf)
+            data_frame = t265Obj.get_frame()
 
             print( ' Pos: {}\t Quat: {}\t Conf:{}'.format(
                     data_frame[1], 

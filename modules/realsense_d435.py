@@ -5,40 +5,36 @@ import time
 
 import numpy as np
 
+
 class rs_d435:
     min_range = 0.1
     max_range = 10
 
     def __init__(self):
         self.depth_width = 640
-        self.depth_height = 480
-        self.rgb_width = 640
-        self.rgb_height = 480
-
-        self.framerate = 30
 
         self.intrin = None
         self.scale = 1
 
         self._FOV = (0, 0)
 
-        self.xDeprojectMatrix = None
-        self.yDeprojectMatrix = None
+        self.x_deproject_matrix = None
+        self.y_deproject_matrix = None
 
     def __enter__(self):
-        self.openConnection()
+        self.open_connection()
 
     def __exit__(self, exception_type, exception_value, traceback):
         if traceback:
             print(traceback.tb_frame)
 
-        self.closeConnection()
+        self.close_connection()
     
     # --------------------------------------------------------------------------
     # openConnection
     # return void
     # --------------------------------------------------------------------------
-    def openConnection(self):
+    def open_connection(self):
         self.pipe = rs.pipeline()
 
         self.cfg = rs.config()
@@ -61,7 +57,7 @@ class rs_d435:
     # closeConnection
     # return void
     # --------------------------------------------------------------------------
-    def closeConnection(self):
+    def close_connection(self):
         self.pipe.stop()
         
         print('rs_t265:D435 Connection Closed')
@@ -71,7 +67,7 @@ class rs_d435:
     # get camera intrinsics
     # return void
     # --------------------------------------------------------------------------
-    def getIntrinsics( self ):
+    def get_intrinsics( self ):
         profile = self.pipe.get_active_profile()
 
         self.intrin = profile.get_stream( rs.stream.depth ) \
@@ -93,22 +89,22 @@ class rs_d435:
     # return void
     # --------------------------------------------------------------------------
     def initialise_deprojection_matrix( self ):
-        self.getIntrinsics()
+        self.get_intrinsics()
         
         # Create deproject row/column vector
-        self.xDeprojectRow = (np.arange( self.depth_width ) - self.intrin.ppx) / self.intrin.fx
-        self.yDeprojectCol = (np.arange( self.depth_height ) - self.intrin.ppy) / self.intrin.fy
+        self.x_deproject_row = (np.arange( self.depth_width ) - self.intrin.ppx) / self.intrin.fx
+        self.y_deproject_col = (np.arange( self.depth_height ) - self.intrin.ppy) / self.intrin.fy
 
         # Tile across full matrix height/width
-        self.xDeprojectMatrix = np.tile( self.xDeprojectRow, (self.depth_height, 1) )
-        self.yDeprojectMatrix = np.tile( self.yDeprojectCol, (self.depth_width, 1) ).transpose()
+        self.x_deproject_matrix = np.tile( self.x_deproject_row, (self.depth_height, 1) )
+        self.y_deproject_matrix = np.tile( self.y_deproject_col, (self.depth_width, 1) ).transpose()
 
     # --------------------------------------------------------------------------
     # getFrame
     # Retrieve a depth frame with scale metres from camera
     # return np.float32[width, height]
     # --------------------------------------------------------------------------
-    def getFrame(self):
+    def get_frame(self):
         frames = self.pipe.wait_for_frames()
 
         # Get depth data
@@ -135,8 +131,8 @@ class rs_d435:
     def deproject_frame( self, frame ):
         frame = frame * self.scale
         Z = frame
-        X = np.multiply( frame, self.xDeprojectMatrix )
-        Y = np.multiply( frame, self.yDeprojectMatrix )
+        X = np.multiply( frame, self.x_deproject_matrix )
+        Y = np.multiply( frame, self.y_deproject_matrix )
 
         return [X, Y, Z]
 
@@ -147,7 +143,7 @@ if __name__ == "__main__":
 
     with d435Obj:
         while True:
-            frame = d435Obj.getFrame()
+            frame = d435Obj.get_frame()
 
             depth = frame[1][2]
             depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=0.03), cv2.COLORMAP_JET)
