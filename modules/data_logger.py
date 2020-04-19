@@ -2,6 +2,7 @@ import threading
 import queue
 import sys
 import time
+import traceback
 
 import logging
 
@@ -11,6 +12,15 @@ class logging_interface:
         self._log_queue_event = threading.Event()
 
         self._loop_running = True
+
+    def __enter__(self):
+        self.start_logging_loop()
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        if traceback:
+            print(traceback.tb_frame)
+
+        self.stop_logging_loop()
 
     # Called by message broker
     def message_callback(self, data):
@@ -92,10 +102,8 @@ class telemetry_log(logging_interface):
 
 if __name__ == "__main__":
     logObj = telemetry_log('telemetry')
-    logObj.start_logging_loop()
 
-    for i in range(10):
-        logObj.message_callback(i)
-        time.sleep(1)
-
-    logObj.stop_logging_loop()
+    with logObj:
+        for i in range(10):
+            logObj.message_callback(i)
+            time.sleep(1)
