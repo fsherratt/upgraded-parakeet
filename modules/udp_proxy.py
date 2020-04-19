@@ -24,49 +24,80 @@ class udp_proxy:
         """
         Socket to be listened on
         """
-        self.sock = socket.socket( socket.AF_INET,
-                              socket.SOCK_DGRAM )
+        self.sock = socket.socket( 
+                        socket.AF_INET,
+                        socket.SOCK_DGRAM )
+
+        """
+        Queue and event handlers
+        """
         self._message_queue_event = threading.Event()
         self._message_queue = queue.Queue()
         self.listening_started = False
+
     """
     Bind to the UDP port specified in init
     """
-    def _bindToPort( self, ip_addr, port ):
+    def _bindToPort( self, ip_addr:str, port:int ):
         self._ip_addr = ip_addr
         self._port = port
         self.sock.bind( (ip_addr, port ) )
 
-    def _queueMessage( self, timestamp, message ):
+    """
+    Add message to the queue
+    """
+    def _queueMessage( self, timestamp:float, message:str ):
         self._message_queue.put( (timestamp, message ));
 
+    """
+    Raise a message event
+    """
     def _setMessageEvent( self ):
         self._message_queue_event.set()
 
+    """
+    Clear event handler for message recieved
+    """
     def _clearMessageEvent( self ):
         self._message_queue_event.clear()
 
+    """
+    Wait forever for a message
+    """
     def _waitForMessageEvent( self ):
         self._message_queue_event.wait()
 
+    """
+    Gets a message from the queue.
+    If the queue is empty, clear the message event.
+    """
     def _getMessage( self ):
         try:
             return self._message_queue.get_nowait()
         except queue.Empty:
             self._clearMessageEvent()
             return None
-
+    
+    """
+    Start a thread for listening on the socket.
+    This creates a self._message_thread object
+    """
     def _startSocketThread( self ):
         self._message_thread = threading.Thread( target=self.ListenToSocket )
         self._message_thread.start()
 
+    """
+    Listen for data on the socket for the provided ip and port.
+    When data is recieved into the buffer (1024), 
+    put it into a queue and raise a message event
+    """
     def ListenToSocket( self ):
         self._bindToPort( self._ip_addr, self._port )
+        # FIXME should proably make a method to close this nicely.
         self.listening_started = True
         while self.listening_started:
-            print( "DEBUG: Listening to server" )
+            #FIXME should probably actually work out buffer size.
             data, addr = self.sock.recvfrom( 1024 )
-            print( "DEBUG: Got data!" )
             data = data.decode()
             timestamp = time.time()
             self._queueMessage( timestamp, data )
@@ -88,17 +119,16 @@ class udp_proxy:
     """
     def RecieveForeverToConsole( self ):
         self._bindToPort( self._ip_addr, self._port )
-
         print( "[x] Recieving forever..." )
-
         while True:
             data, addr = self.sock.recvfrom( 1024 )
             data = data.decode()
             print( f"recieved message:{data}" )
 
+    """
+    Send a message to the supplied ip and port
+    """
     def SendMessage( self, message:str ):
-        print( f"Sending message : {message} to addr : {self._ip_addr}, port : {self._port}" )
-
         #handling for bytes being passed in
         if isinstance( message, str ):
             message = message.encode()

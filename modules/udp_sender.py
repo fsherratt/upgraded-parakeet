@@ -21,6 +21,9 @@ class udp_publisher():
 
         self._channel.queue_bind( exchange="udp_message", queue=self._queue_name, routing_key="message" )
 
+    """
+    Callback function for routing message to the proxy server
+    """
     def _routeMessageToServer( self, ch, method, properties, body ):
         self._proxy.SendMessage( body )
 
