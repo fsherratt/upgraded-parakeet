@@ -30,7 +30,6 @@ class logging_interface:
             msg = self._get_message()
 
             if msg is None:
-                self._clear_message_event()
                 continue
 
             self.save_to_file(msg)
@@ -56,7 +55,9 @@ class logging_interface:
         try:
             return self._loq_queue.get_nowait()
         except queue.Empty:
-            return None
+            self._clear_message_event()
+
+        return None
 
     # Interface method
     def save_to_file(self, msg):
