@@ -2,6 +2,9 @@
 
 import socket
 import sys
+import threading
+import queue
+import time
 
 DEFAULT_IP_ADDR = "127.0.0.1"
 DEFAULT_PORT = 5005
@@ -23,9 +26,69 @@ class udp_proxy:
         """
         self.sock = socket.socket( socket.AF_INET,
                               socket.SOCK_DGRAM )
+        self._message_queue_event = threading.Event()
+        self._message_queue = queue.Queue()
+        self.listening_started = False
+    """
+    Bind to the UDP port specified in init
+    """
+    def _bindToPort( self, ip_addr, port ):
+        self._ip_addr = ip_addr
+        self._port = port
+        self.sock.bind( (ip_addr, port ) )
 
-    def RecieveForever( self ):
-        self.sock.bind( ( self._ip_addr, self._port )  )
+    def _queueMessage( self, timestamp, message ):
+        self._message_queue.put( (timestamp, message ));
+
+    def _setMessageEvent( self ):
+        self._message_queue_event.set()
+
+    def _clearMessageEvent( self ):
+        self._message_queue_event.clear()
+
+    def _waitForMessageEvent( self ):
+        self._message_queue_event.wait()
+
+    def _getMessage( self ):
+        try:
+            return self._message_queue.get_nowait()
+        except queue.Empty:
+            self._clearMessageEvent()
+            return None
+
+    def _startSocketThread( self ):
+        self._message_thread = threading.Thread( target=self.ListenToSocket )
+        self._message_thread.start()
+
+    def ListenToSocket( self ):
+        self._bindToPort( self._ip_addr, self._port )
+        self.listening_started = True
+        while self.listening_started:
+            print( "DEBUG: Listening to server" )
+            data, addr = self.sock.recvfrom( 1024 )
+            print( "DEBUG: Got data!" )
+            data = data.decode()
+            timestamp = time.time()
+            self._queueMessage( timestamp, data )
+            self._setMessageEvent()
+
+    """
+    Recieve any data on the port
+    """
+    def RecieveData( self ) -> str:
+        if not self.listening_started:
+            self._startSocketThread()
+        self._waitForMessageEvent()
+         
+        return self._getMessage()
+
+
+    """
+    Recieve data and print to the console forever
+    """
+    def RecieveForeverToConsole( self ):
+        self._bindToPort( self._ip_addr, self._port )
+
         print( "[x] Recieving forever..." )
 
         while True:
@@ -45,7 +108,7 @@ class udp_proxy:
 if __name__ == "__main__":
     proxy = udp_proxy( DEFAULT_IP_ADDR, DEFAULT_PORT )
     if len( sys.argv ) < 2:
-        proxy.RecieveForever()
+        proxy.RecieveForeverToConsole()
 
     print( f"Current arguments" )
     print( f" length:{len(sys.argv)}, arg1:{sys.argv[1]}, arg2:{sys.argv[2]}")
