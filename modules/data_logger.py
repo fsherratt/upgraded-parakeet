@@ -6,7 +6,7 @@ import traceback
 
 import logging
 
-class logging_interface:
+class LoggingInterface:
     def __init__(self):
         self._loq_queue = queue.Queue()
         self._log_queue_event = threading.Event()
@@ -74,7 +74,7 @@ class logging_interface:
         # Save message to file using abstracted save method
         print(msg, file=sys.stdout)
 
-class telemetry_log(logging_interface):
+class FileLogger(LoggingInterface):
     def __init__(self, log_name, print_to_console=True):
         super().__init__()
 
@@ -101,9 +101,9 @@ class telemetry_log(logging_interface):
         self.logger.debug(msg[1])
 
 if __name__ == "__main__":
-    logObj = telemetry_log('telemetry')
+    file_log = FileLogger('telemetry')
 
-    with logObj:
+    with file_log:
         for i in range(10):
-            logObj.message_callback(i)
+            file_log.message_callback(i)
             time.sleep(1)
