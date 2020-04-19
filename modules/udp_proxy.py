@@ -38,7 +38,7 @@ class udp_proxy:
     """
     Bind to the UDP port specified in init
     """
-    def _bindToPort( self, ip_addr:str, port:int ):
+    def _bind_to_port( self, ip_addr:str, port:int ):
         self._ip_addr = ip_addr
         self._port = port
         self.sock.bind( (ip_addr, port ) )
@@ -46,44 +46,44 @@ class udp_proxy:
     """
     Add message to the queue
     """
-    def _queueMessage( self, timestamp:float, message:str ):
+    def _queue_message( self, timestamp:float, message:str ):
         self._message_queue.put( (timestamp, message ));
 
     """
     Raise a message event
     """
-    def _setMessageEvent( self ):
+    def _set_message_event( self ):
         self._message_queue_event.set()
 
     """
     Clear event handler for message recieved
     """
-    def _clearMessageEvent( self ):
+    def _clear_message_event( self ):
         self._message_queue_event.clear()
 
     """
     Wait forever for a message
     """
-    def _waitForMessageEvent( self ):
+    def _wait_for_message_event( self ):
         self._message_queue_event.wait()
 
     """
     Gets a message from the queue.
     If the queue is empty, clear the message event.
     """
-    def _getMessage( self ):
+    def _get_message( self ):
         try:
             return self._message_queue.get_nowait()
         except queue.Empty:
-            self._clearMessageEvent()
+            self._clear_message_event()
             return None
     
     """
     Start a thread for listening on the socket.
     This creates a self._message_thread object
     """
-    def _startSocketThread( self ):
-        self._message_thread = threading.Thread( target=self.ListenToSocket )
+    def _start_socket_thread( self ):
+        self._message_thread = threading.Thread( target=self.listen_to_socket )
         self._message_thread.start()
 
     """
@@ -91,8 +91,8 @@ class udp_proxy:
     When data is recieved into the buffer (1024), 
     put it into a queue and raise a message event
     """
-    def ListenToSocket( self ):
-        self._bindToPort( self._ip_addr, self._port )
+    def listen_to_socket( self ):
+        self._bind_to_port( self._ip_addr, self._port )
         # FIXME should proably make a method to close this nicely.
         self.listening_started = True
         while self.listening_started:
@@ -100,25 +100,25 @@ class udp_proxy:
             data, addr = self.sock.recvfrom( 1024 )
             data = data.decode()
             timestamp = time.time()
-            self._queueMessage( timestamp, data )
-            self._setMessageEvent()
+            self._queue_message( timestamp, data )
+            self._set_message_event()
 
     """
     Recieve any data on the port
     """
-    def RecieveData( self ) -> str:
+    def recieve_data( self ) -> str:
         if not self.listening_started:
-            self._startSocketThread()
-        self._waitForMessageEvent()
+            self._start_socket_thread()
+        self._wait_for_message_event()
          
-        return self._getMessage()
+        return self._get_message()
 
 
     """
     Recieve data and print to the console forever
     """
-    def RecieveForeverToConsole( self ):
-        self._bindToPort( self._ip_addr, self._port )
+    def recieve_forever_to_console( self ):
+        self._bind_to_port( self._ip_addr, self._port )
         print( "[x] Recieving forever..." )
         while True:
             data, addr = self.sock.recvfrom( 1024 )
@@ -128,7 +128,7 @@ class udp_proxy:
     """
     Send a message to the supplied ip and port
     """
-    def SendMessage( self, message:str ):
+    def send_message( self, message:str ):
         #handling for bytes being passed in
         if isinstance( message, str ):
             message = message.encode()
@@ -138,14 +138,14 @@ class udp_proxy:
 if __name__ == "__main__":
     proxy = udp_proxy( DEFAULT_IP_ADDR, DEFAULT_PORT )
     if len( sys.argv ) < 2:
-        proxy.RecieveForeverToConsole()
+        proxy.recieve_forever_to_console()
 
     print( f"Current arguments" )
     print( f" length:{len(sys.argv)}, arg1:{sys.argv[1]}, arg2:{sys.argv[2]}")
     
     if sys.argv[ 1 ] == "send":
         print( "[x] Sending message..." )
-        proxy.SendMessage( sys.argv[ 2 ] )
+        proxy.send_message( sys.argv[ 2 ] )
     else:
         print( "[x] Arguments not recognised. Argument: {sys.argv[1]}" )
         print( "[x] Valid argument: send" )

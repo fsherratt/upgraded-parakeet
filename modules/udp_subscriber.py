@@ -20,7 +20,7 @@ class udp_subscriber():
     """
     Route the message recieved from the server to rabbit mq
     """
-    def _routeMessageFromServer( self, message:str ):
+    def _route_message_from_server( self, message:str ):
         #FIXME probably need to work out routing key.
         self._channel.basic_publish(
                 exchange='udp_message',
@@ -30,14 +30,15 @@ class udp_subscriber():
     """
     Begin listening on the server and forwarding messages to rabbit mq
     """
-    def BeginSubscribing( self ):
+    def begin_subscribing( self ):
         # Consume from proxy, publish to udp_message queue with recieved route.
         while True:
-            data = self._proxy.RecieveData()
+            data = self._proxy.recieve_data()
+            print( f"[x] got data : {data}" )
             # If we have data, publish it, otherwise drop the event
             if data is not None:
-                self._routeMessageFromServer( str( data ) )
+                self._route_message_from_server( str( data ) )
         
 if __name__ == "__main__":
     pub = udp_subscriber( '127.0.0.1', 5005 )
-    pub.BeginSubscribing()
+    pub.begin_subscribing()

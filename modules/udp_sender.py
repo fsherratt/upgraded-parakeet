@@ -24,17 +24,17 @@ class udp_publisher():
     """
     Callback function for routing message to the proxy server
     """
-    def _routeMessageToServer( self, ch, method, properties, body ):
-        self._proxy.SendMessage( body )
+    def _route_message_to_server( self, ch, method, properties, body ):
+        self._proxy.send_message( body )
 
     """
     Begins reciving data from the queue and forwarding all data to the declared udp port
     """
-    def BeginPublishing( self ):
+    def begin_publishing( self ):
         self._channel.basic_consume(
-            queue=self._queue_name, on_message_callback=self._routeMessageToServer, auto_ack=True )
+            queue=self._queue_name, on_message_callback=self._route_message_to_server, auto_ack=True )
         self._channel.start_consuming()
 
 if __name__ == "__main__":
     pub = udp_publisher( '127.0.0.1', 5005 )
-    pub.BeginPublishing()
+    pub.begin_publishing()

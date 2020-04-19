@@ -21,7 +21,7 @@ class test_rabbitmq_publisher():
     """
     Begins reciving data from the queue and forwarding all data to the declared udp port
     """
-    def SendMessage( self, message:str ):
+    def send_message( self, message:str ):
         self._channel.basic_publish(
                 exchange=self._exchange_name,
                 routing_key=self._routing_key,
@@ -33,4 +33,4 @@ if __name__ == "__main__":
         print( "Usage: {sys.argv[0]} <exchange name> <routing key> <message>" )
     else:
         pub = test_rabbitmq_publisher( sys.argv[1], sys.argv[2] )
-        pub.SendMessage( sys.argv[3] )
+        pub.send_message( sys.argv[3] )
