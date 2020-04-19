@@ -1,22 +1,22 @@
 from context import modules
 from unittest import TestCase, mock
 
-from modules.data_logger import logging_interface
+from modules.data_logger import LoggingInterface, FileLogger
 
 class TestTemplate(TestCase):
     def setUp(self):
-        self.logObj = logging_interface()
+        self.logObj = LoggingInterface()
     
     def tearDown(self):
         self.logObj.stop_logging_loop()
 
-    @mock.patch('modules.data_logger.logging_interface._queue_message')
+    @mock.patch('modules.data_logger.LoggingInterface._queue_message')
     def test_valid_message_callback_queued(self, mock_fcn):
         self.logObj.message_callback('Data')
 
         mock_fcn.assert_called()
 
-    @mock.patch('modules.data_logger.logging_interface._queue_message')
+    @mock.patch('modules.data_logger.LoggingInterface._queue_message')
     def test_arguments_sent_to_queue_message(self, mock_fcn):
         data = 'Data'
         time = 2
@@ -26,7 +26,7 @@ class TestTemplate(TestCase):
 
         mock_fcn.assert_called_with(time, data)
 
-    @mock.patch('modules.data_logger.logging_interface._queue_message')
+    @mock.patch('modules.data_logger.LoggingInterface._queue_message')
     def test_valid_message_event_set(self, mock_fcn):
         self.logObj.message_callback('Data')
 
@@ -55,7 +55,7 @@ class TestTemplate(TestCase):
 
         self.assertFalse(self.logObj._log_thread.is_alive())
     
-    @mock.patch('modules.data_logger.logging_interface._get_message', return_value=None)
+    @mock.patch('modules.data_logger.LoggingInterface._get_message', return_value=None)
     def test_loop_waits_for_message(self, mock_get):
         self.logObj.start_logging_loop()
 
@@ -66,7 +66,7 @@ class TestTemplate(TestCase):
 
         mock_get.assert_called()
 
-    @mock.patch('modules.data_logger.logging_interface._clear_message_event')
+    @mock.patch('modules.data_logger.LoggingInterface._clear_message_event')
     def test_event_cleared_on_empty_queue(self, mock_clear):
 
         self.logObj.start_logging_loop()
@@ -77,7 +77,7 @@ class TestTemplate(TestCase):
 
         mock_clear.assert_called()
 
-    @mock.patch('modules.data_logger.logging_interface.save_to_file')
+    @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_loop_stays_open_after_message(self, mock_save):
         self.logObj.start_logging_loop()
         self.logObj.message_callback('data')
@@ -87,8 +87,8 @@ class TestTemplate(TestCase):
 
         self.assertTrue(self.logObj._log_thread.is_alive())
 
-    @mock.patch('modules.data_logger.logging_interface._get_message', return_value=None)
-    @mock.patch('modules.data_logger.logging_interface.save_to_file')
+    @mock.patch('modules.data_logger.LoggingInterface._get_message', return_value=None)
+    @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_empty_message_not_passed_to_save(self, mock_save, mock_get):
         self.logObj.start_logging_loop()
         
@@ -98,7 +98,7 @@ class TestTemplate(TestCase):
 
         mock_save.assert_not_called()
     
-    @mock.patch('modules.data_logger.logging_interface.save_to_file')
+    @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_message_passed_to_save(self, mock_save):
         self.logObj.start_logging_loop()
         self.logObj.message_callback('data')
@@ -108,4 +108,9 @@ class TestTemplate(TestCase):
 
         mock_save.assert_called()
 
+class FileLog(TestCase):
+    def setUp(self):
+        self.logObj = FileLogger()
     
+    def tearDown(self):
+        self.logObj.stop_logging_loop()
