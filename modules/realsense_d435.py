@@ -78,7 +78,7 @@ class rs_d435:
         self._pipe.stop()
         self._pipe = None
 
-        print('rs_t265:D435 Connection Closed')
+        print('rs_d435:D435 Connection Closed')
 
     """
     Retrieve a data from the D435 camera
@@ -127,8 +127,8 @@ class rs_d435:
         self._FOV = np.deg2rad(self._FOV)
 
     """
-    Initalise conversion matrix for converting the depth frame to a depojected 3D 
-    cooridinate system
+    Initialise conversion matrix for converting the depth frame to a de-projected 3D 
+    coordinate system
     """
     def _initialise_deprojection_matrix(self):
         self._get_intrinsics()
