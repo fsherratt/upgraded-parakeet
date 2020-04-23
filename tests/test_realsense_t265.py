@@ -1,14 +1,57 @@
 from context import modules
-import unittest
+from unittest import TestCase, mock
 
 from modules import realsense_t265
 
-class TestTemplate(unittest.TestCase):
+class TestTemplate(TestCase):
     def setUp(self):
-        self.rs = realsense_t265.rs_t265()
+        self.t265 = realsense_t265.rs_t265()
     
     def tearDown(self):
         pass
 
     def test_import_success(self):
         self.assertTrue(True)
+
+    @mock.patch('pyrealsense2.pipeline.stop')
+    @mock.patch('pyrealsense2.pipeline.start')
+    def test_start_stop_connection(self, mock_start, mock_stop):
+        import pyrealsense2 as rs
+        self.t265._pipe = rs.pipeline()
+
+        with self.t265:
+            pass
+        mock_start.assert_called()
+        mock_stop.assert_called()  
+
+    @mock.patch('time.time')
+    @mock.patch('pyrealsense2.pipeline.wait_for_frames')
+    @mock.patch('pyrealsense2.composite_frame.get_pose_frame')
+    @mock.patch('pyrealsense2.pose_frame.get_pose_data')
+    def test_get_frames(self, mock_pose, mock_frame, mock_wait, mock_time):
+        import pyrealsense2 as rs
+        self.t265._pipe = rs.pipeline()
+
+        mock_pose_data = mock.PropertyMock()
+        type(mock_pose_data.translation).x = mock.PropertyMock(return_value=1)
+        type(mock_pose_data.translation).y = mock.PropertyMock(return_value=2)
+        type(mock_pose_data.translation).z = mock.PropertyMock(return_value=3)
+
+        type(mock_pose_data.rotation).x = mock.PropertyMock(return_value=0)
+        type(mock_pose_data.rotation).y = mock.PropertyMock(return_value=0)
+        type(mock_pose_data.rotation).z = mock.PropertyMock(return_value=0)
+        type(mock_pose_data.rotation).w = mock.PropertyMock(return_value=1)
+
+        type(mock_pose_data).tracker_confidence = mock.PropertyMock(return_value=3)
+
+        mock_wait.return_value = rs.composite_frame
+        mock_frame.return_value = rs.pose_frame
+        mock_pose.return_value = mock_pose_data
+        mock_time.return_value = 12
+
+        rtn_value = self.t265.get_frame()
+
+        self.assertEqual(rtn_value[0],  12)
+        self.assertListEqual(rtn_value[1], [1,2,3])
+        self.assertListEqual(rtn_value[2], [0,0,0,1])
+        self.assertEqual(rtn_value[3], 3)
