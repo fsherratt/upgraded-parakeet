@@ -27,7 +27,7 @@ class rs_d435:
         self._intrin = None
         self._scale = 1
 
-        self._FOV = (0, 0)
+        self._FOV = None
 
         self._x_deproject_matrix = None
         self._y_deproject_matrix = None
@@ -125,7 +125,6 @@ class rs_d435:
                         .get_depth_scale()
                         
         self._FOV = rs.rs2_fov(self._intrin)
-        self._FOV = np.deg2rad(self._FOV)
 
     """
     Initialise conversion matrix for converting the depth frame to a de-projected 3D 

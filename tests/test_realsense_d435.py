@@ -123,6 +123,38 @@ class TestTemplate(TestCase):
         mock_limit.assert_called()
         mock_scale.assert_called()
 
-    def test_get_intrinsics(self):
-        #TODO: should probably add in tests for intrinsics
-        pass
+    @mock.patch('pyrealsense2.pipeline.get_active_profile')
+    @mock.patch('pyrealsense2.pipeline_profile.get_stream')
+    @mock.patch('pyrealsense2.stream_profile.as_video_stream_profile')
+    @mock.patch('pyrealsense2.video_stream_profile.get_intrinsics')
+    @mock.patch('pyrealsense2.pipeline_profile.get_device')
+    @mock.patch('pyrealsense2.device.first_depth_sensor')
+    @mock.patch('pyrealsense2.depth_sensor.get_depth_scale')
+    @mock.patch('pyrealsense2.rs2_fov')
+    def test_get_intrinsics(self, mock_fov, mock_depth_scale, mock_first_sensor, 
+                            mock_get_device, mock_get_intrinsics,  
+                            mock_video_stream_profile, mock_get_stream, mock_get_profile):
+        import pyrealsense2 as rs
+
+        mock_scale_value = 0.001
+        mocK_fov_value = [0,0]
+
+        mock_get_profile.return_value = rs.pipeline_profile
+
+        mock_get_stream.return_value = rs.stream_profile
+        mock_video_stream_profile.return_value = rs.video_stream_profile
+        mock_get_intrinsics.return_value = rs.intrinsics
+
+
+        mock_get_device.return_value = rs.device
+        mock_first_sensor.return_value = rs.depth_sensor
+        mock_depth_scale.return_value = mock_scale_value
+
+        mock_fov.return_value = mocK_fov_value
+
+        self.d435._pipe = rs.pipeline()
+        self.d435._get_intrinsics()
+
+        self.assertEqual(self.d435._intrin, rs.intrinsics)
+        self.assertEqual(self.d435._scale, mock_scale_value)
+        self.assertEqual(self.d435._FOV, mocK_fov_value)
