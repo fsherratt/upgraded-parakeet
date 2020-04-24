@@ -16,7 +16,7 @@ class TestTemplate(TestCase):
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
     @mock.patch('modules.realsense_d435.rs_d435._initialise_deprojection_matrix')
-    def test_open_connection(self, _, mock_start, mock_stop):
+    def test_start_stop_connection(self, _, mock_start, mock_stop):
         import pyrealsense2 as rs
         self.d435._pipe = rs.pipeline()
 
@@ -51,37 +51,42 @@ class TestTemplate(TestCase):
         self.assertEqual(rtn[1], test_array[1])
         self.assertTrue(np.isnan(rtn[2]))
 
-    '''
-    This is a stupid test...
-    '''
+    @mock.patch('time.time')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
+    @mock.patch('pyrealsense2.composite_frame.get_depth_frame')
+    @mock.patch('pyrealsense2.composite_frame.get_color_frame')
+    @mock.patch('pyrealsense2.depth_frame.get_data')
+    @mock.patch('pyrealsense2.video_frame.get_data')
     @mock.patch('modules.realsense_d435.rs_d435._process_depth_frame')
-    def test_get_frames(self, mock_process, mock_wait):
+    def test_get_frames(self, mock_process, mock_color_data, mock_depth_data,
+                        mock_get_color, mock_get_depth, mock_wait, mock_time):
         import pyrealsense2 as rs
         import numpy as np
+
+        mock_time.return_value = 12
+
+        mock_wait.return_value = rs.composite_frame
+        mock_get_depth.return_value = rs.depth_frame
+        mock_get_color.return_value = rs.video_frame
+        mock_color_data.return_value = 1
+        mock_depth_data.return_value = 1
+
+        # Apply no transforms to the data
+        mock_process.side_effect = (lambda x: x) 
+        
         self.d435._pipe = rs.pipeline()
+        rtn_value = self.d435.get_frame()
+        
+        mock_process.assert_called()
+        self.assertEqual(rtn_value[0], 12)
+        self.assertEqual(rtn_value[1],  1)
+        self.assertEqual(rtn_value[2], 1)
 
-        mock_depth_data = 1
-        mock_color_data = 1
-
-        depth_mock = mock.MagicMock()
-        depth_mock.get_data = mock.MagicMock(return_value=mock_depth_data)
-
-        color_mock = mock.MagicMock()
-        color_mock.get_data = mock.MagicMock(return_value=mock_color_data)
-
-        frames_mock = mock.MagicMock()
-        frames_mock.get_depth_frame = mock.MagicMock(return_value=depth_mock)
-        frames_mock.get_color_frame = mock.MagicMock(return_value=color_mock)
-
-        mock_wait.return_value = frames_mock
-        mock_process.return_value = np.asarray(mock_depth_data, dtype=np.float32)
-
+        #TODO add is exception handling
+        mock_color_data.side_effect = AttributeError()
         rtn_value = self.d435.get_frame()
 
-        mock_process.assert_called()
-        self.assertEqual(rtn_value[1],  mock_depth_data)
-        self.assertEqual(rtn_value[2], mock_color_data)
+        self.assertIsNone(rtn_value)
 
     def test_fov_return(self):
         self.d435._FOV = 9
@@ -117,3 +122,7 @@ class TestTemplate(TestCase):
         mock_deproject.assert_called()
         mock_limit.assert_called()
         mock_scale.assert_called()
+
+    def test_get_intrinsics(self):
+        #TODO: should probably add in tests for intrinsics
+        pass

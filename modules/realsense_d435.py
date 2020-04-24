@@ -84,6 +84,7 @@ class rs_d435:
     Retrieve a data from the D435 camera
     """
     def get_frame(self) -> tuple:
+        #TODO: add in timeout exception handling
         frames = self._pipe.wait_for_frames()
 
         depth_frame = frames.get_depth_frame()
@@ -97,7 +98,7 @@ class rs_d435:
             return None
 
         depth_points = np.asarray(depth_points, dtype=np.float32)
-        color_image = np.asanyarray(color_image, dtype=np.uint8)
+        color_image = np.asarray(color_image, dtype=np.uint8)
 
         depth_points = self._process_depth_frame(depth_points)
 
