@@ -9,9 +9,13 @@ class rs_t265:
     Initialise variables for T265 camera
     """
     def __init__(self):
+        # Public
+        self.tilt_deg = 0
+
         # Private
         self._pipe = None
-
+        
+        self._initialise_rotational_transforms()
     """
     with __enter__ method opens a connected to the T265 camera
     """
@@ -82,12 +86,16 @@ class rs_t265:
 
         return (time.time(), pos, quat, conf)
 
-    """
-    TODO: Add method to convert to FED coordinates
-    """
-    def _convert_coordinate_frame(self, quat) -> list:
-        return quat
+    def _convert_rotational_frame(self, quat) -> list:
+        rot = self.H_aeroRef_T265Ref * R.from_quat(quat)  * self.H_T265body_aeroBody
 
+        return rot.as_quat()
+
+    """
+    TODO: Add method to convert to NED coordinates
+    """
+    def _convert_positional_frame(self, pos) -> list:
+        return self.H_aeroRef_T265Ref.apply(np.asarray(pos))
 
 if __name__ == "__main__":   
     t265Obj = rs_t265()
