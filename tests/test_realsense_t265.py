@@ -22,7 +22,11 @@ class TestTemplate(TestCase):
         with self.t265:
             pass
         mock_start.assert_called()
-        mock_stop.assert_called()  
+        mock_stop.assert_called()
+
+        #TODO: Mock device not connected exception
+
+        #TODO: Mock unexpected disconnect
 
     @mock.patch('time.time')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
@@ -60,7 +64,15 @@ class TestTemplate(TestCase):
 
         mock_coord_transform.assert_called()
         
+        #TODO: Add in excetion handling
         mock_pose.side_effect = AttributeError()
         rtn_value = self.t265.get_frame()
 
+        #TODO: Mock timeout
+
         self.assertIsNone(rtn_value)
+
+
+    def test_convert_coordinate_frame(self):
+        pass
+        #TODO: Add in coordinate conversion tests

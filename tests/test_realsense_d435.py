@@ -23,7 +23,11 @@ class TestTemplate(TestCase):
         with self.d435:
             pass
         mock_start.assert_called()
-        mock_stop.assert_called()       
+        mock_stop.assert_called()
+
+        #TODO: Mock device not connected exception
+
+        #TODO: Mock unexpected disconnect
 
     @mock.patch('modules.realsense_d435.rs_d435._get_intrinsics')    
     def test_deprojection_matrix_shape(self, _):
@@ -82,9 +86,11 @@ class TestTemplate(TestCase):
         self.assertEqual(rtn_value[1],  1)
         self.assertEqual(rtn_value[2], 1)
 
-        #TODO add is exception handling
+        #TODO: add is exception handling
         mock_color_data.side_effect = AttributeError()
         rtn_value = self.d435.get_frame()
+
+        #TODO: mock timeout
 
         self.assertIsNone(rtn_value)
 

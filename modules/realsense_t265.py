@@ -35,6 +35,8 @@ class rs_t265:
         cfg.enable_stream(rs.stream.pose)
 
         self._pipe = rs.pipeline()
+
+        # TODO: Add in timeout exception handling
         self._pipe.start(cfg)
         print('rs_t265:T265 Connection Open')
 
@@ -54,7 +56,9 @@ class rs_t265:
     Retrieve a data from the T265 camera
     """
     def get_frame(self) -> tuple:
+        # TODO: add in timeout exception handling
         frames = self._pipe.wait_for_frames()
+
         pose = frames.get_pose_frame()
 
         try:

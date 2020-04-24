@@ -62,6 +62,8 @@ class rs_d435:
                                 self.framerate)
 
         self._pipe = rs.pipeline()
+        
+        # TODO: Add in timeout exception handling
         self._pipe.start( cfg  )
 
         self._initialise_deprojection_matrix()
