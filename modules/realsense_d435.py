@@ -93,18 +93,19 @@ class rs_d435:
         color_frame = frames.get_color_frame()
 
         try:
-            depth_points = depth_frame.get_data()
+            depth_image = depth_frame.get_data()
             color_image = color_frame.get_data()
         except AttributeError:
             # TODO: error about no data in frame
             return None
 
-        depth_points = np.asarray(depth_points, dtype=np.float32)
-        color_image = np.asarray(color_image, dtype=np.uint8)
+        depth_image = np.asarray(depth_image, dtype=np.float32)
+        color_image = np.asanyarray(color_image, dtype=np.uint8)
 
-        depth_points = self._process_depth_frame(depth_points)
+        depth_image = self._process_depth_frame(depth_image)
+        depth_points = self._deproject_frame(depth_image)
 
-        return (time.time(), depth_points, color_image)
+        return (time.time(), depth_points, depth_image, color_image)
 
     """
     Returns the FOV of the connected camera
@@ -147,8 +148,6 @@ class rs_d435:
     def _process_depth_frame(self, frame:np.array):
         frame = self._scale_depth_frame(frame)
         frame = self._limit_depth_range(frame)
-        frame = self._deproject_frame(frame)
-
         return frame
 
     """
@@ -172,7 +171,11 @@ class rs_d435:
         X = np.multiply( frame, self._x_deproject_matrix )
         Y = np.multiply( frame, self._y_deproject_matrix )
 
-        return [Z, X, Y] # Output as FRD coordinates
+        Z = np.reshape(Z, (-1))
+        X = np.reshape(X, (-1))
+        Y = np.reshape(Y, (-1))
+
+        return np.column_stack( (Z,X,Y) ) # Output as FRD coordinates
 
 
 if __name__ == "__main__":
@@ -184,10 +187,10 @@ if __name__ == "__main__":
         while True:
             frame = d435Obj.get_frame()
 
-            depth = frame[1][0]
+            depth = frame[2]
             depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=50), cv2.COLORMAP_JET)
 
             np.nan_to_num(depth, nan=0)
             cv2.imshow('depth_frame', depth)
-            cv2.imshow('color_frame', frame[2])
+            cv2.imshow('color_frame', frame[3])
             cv2.waitKey(1)
