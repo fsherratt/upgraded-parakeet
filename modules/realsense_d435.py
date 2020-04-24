@@ -160,8 +160,7 @@ class rs_d435:
     Limit the maximum/minimum range of the depth camera
     """
     def _limit_depth_range(self, frame:np.array):
-        frame[ frame > self.max_range ] = np.nan
-        frame[ frame < self.min_range ] = np.nan
+        frame[ np.logical_or(frame < self.min_range, frame > self.max_range) ] = np.nan
         return frame
 
     """
