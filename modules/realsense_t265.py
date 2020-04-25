@@ -1,7 +1,6 @@
 import traceback
 import sys
 import time
-
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
@@ -12,11 +11,15 @@ class rs_t265:
     def __init__(self):
         # Public
         self.tilt_deg = 0
+        self.North_offset = 0
 
         # Private
         self._pipe = None
+        self.H_aeroRef_T265Ref = None
+        self.H_T265body_aeroBody = None
         
         self._initialise_rotational_transforms()
+
     """
     With __enter__ method opens a connected to the T265 camera
     """
@@ -97,17 +100,18 @@ class rs_t265:
         return (time.time(), pos, quat, conf)
 
     """
-    TODO: Add comments and test
-    TODO: Add NED coordinates
+    Initialise rotational transforms between tilted T265 and NED aero body and ref frames
     """
     def _initialise_rotational_transforms(self):
-        self.H_aeroRef_T265Ref = [[0,0,-1],[1,0,0],[0,-1,0]]
-        self.H_aeroRef_T265Ref = R.from_matrix(self.H_aeroRef_T265Ref)
-
-        self.H_T265body_aeroBody = R.from_euler('x', self.tilt_deg, degrees=True) * self.H_aeroRef_T265Ref.inv()
+        H_aeroNEDRef_aeroRef = R.from_euler('z', self.North_offset, degrees=True)
+        H_aeroRef_T265Ref = R.from_matrix([[0,0,-1],[1,0,0],[0,-1,0]])
+        H_T265Tilt_T265Body = R.from_euler('x', self.tilt_deg, degrees=True)
+        
+        self.H_aeroRef_T265Ref = H_aeroNEDRef_aeroRef * H_aeroRef_T265Ref
+        self.H_T265body_aeroBody = H_T265Tilt_T265Body * H_aeroRef_T265Ref.inv()
 
     """
-    TODO: Add comments and test
+    Convert T265 rotational frame to aero NED frame
     """
     def _convert_rotational_frame(self, quat) -> list:
         rot = self.H_aeroRef_T265Ref * R.from_quat(quat)  * self.H_T265body_aeroBody
@@ -115,10 +119,10 @@ class rs_t265:
         return rot.as_quat()
 
     """
-    TODO: Add comments and test
+    Convert T264 translation frame to aero NED translation
     """
     def _convert_positional_frame(self, pos) -> list:
-        return self.H_aeroRef_T265Ref.apply(np.asarray(pos))
+        return self.H_aeroRef_T265Ref.apply(pos)
 
     """
     Function to collate interal class exceptions
