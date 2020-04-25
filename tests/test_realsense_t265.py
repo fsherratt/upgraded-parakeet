@@ -13,9 +13,10 @@ class TestTemplate(TestCase):
     def test_import_success(self):
         self.assertTrue(True)
 
+    @mock.patch('modules.realsense_t265.rs_t265._exception_handle')
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
-    def test_start_stop_connection(self, mock_start, mock_stop):
+    def test_start_stop_connection(self, mock_start, mock_stop, mock_exception):
         import pyrealsense2 as rs
         self.t265._pipe = rs.pipeline()
 
@@ -24,18 +25,30 @@ class TestTemplate(TestCase):
         mock_start.assert_called()
         mock_stop.assert_called()
 
-        #TODO: Mock device not connected exception
+        try:
+            with self.t265:
+                self.t265.not_a_function()
+        except:
+            pass
+        
+        mock_exception.assert_called()
+        mock_exception.reset_mock()
 
-        #TODO: Mock unexpected disconnect
+        mock_start.side_effect = TimeoutError()
+        with self.assertRaises(TimeoutError):
+            self.t265.open_connection()
+
+        mock_exception.assert_called()
 
     @mock.patch('time.time')
+    @mock.patch('modules.realsense_t265.rs_t265._exception_handle')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
     @mock.patch('pyrealsense2.composite_frame.get_pose_frame')
     @mock.patch('pyrealsense2.pose_frame.get_pose_data')
     @mock.patch('modules.realsense_t265.rs_t265._convert_rotational_frame')
     @mock.patch('modules.realsense_t265.rs_t265._convert_positional_frame')
     def test_get_frames(self, mock_pos_transform, mock_rot_transform, 
-                        mock_pose, mock_frame, mock_wait, mock_time):
+                        mock_pose, mock_frame, mock_wait, mock_exception, mock_time):
         import pyrealsense2 as rs
         mock_pos_transform.side_effect = (lambda x: x) 
         mock_rot_transform.side_effect = (lambda x: x) 
@@ -68,13 +81,18 @@ class TestTemplate(TestCase):
         mock_pos_transform.assert_called()
         mock_rot_transform.assert_called()
         
-        #TODO: Add in excetion handling
         mock_pose.side_effect = AttributeError()
         rtn_value = self.t265.get_frame()
-
-        #TODO: Mock timeout
-
+        
+        mock_exception.assert_called()
         self.assertIsNone(rtn_value)
+
+        mock_exception.reset_mock()
+        mock_wait.side_effect = TimeoutError()
+        with self.assertRaises(TimeoutError):
+            self.t265.get_frame()
+
+        mock_exception.assert_called()
 
     def test_convert_coordinate_frame(self):
         pass

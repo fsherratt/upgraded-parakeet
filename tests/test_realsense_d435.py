@@ -12,11 +12,12 @@ class TestTemplate(TestCase):
 
     def test_import_success(self):
         self.assertTrue(True)
-
+    
+    @mock.patch('modules.realsense_d435.rs_d435._exception_handle')
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
     @mock.patch('modules.realsense_d435.rs_d435._initialise_deprojection_matrix')
-    def test_start_stop_connection(self, _, mock_start, mock_stop):
+    def test_start_stop_connection(self, _, mock_start, mock_stop, mock_exception):
         import pyrealsense2 as rs
         self.d435._pipe = rs.pipeline()
 
@@ -25,10 +26,21 @@ class TestTemplate(TestCase):
         mock_start.assert_called()
         mock_stop.assert_called()
 
-        #TODO: Mock device not connected exception
+        try:
+            with self.d435:
+                self.d435.not_a_function()
+        except:
+            pass
+        
+        mock_exception.assert_called()
+        mock_exception.reset_mock()
 
-        #TODO: Mock unexpected disconnect
+        mock_start.side_effect = TimeoutError()
+        with self.assertRaises(TimeoutError):
+            self.d435.open_connection()
 
+        mock_exception.assert_called()
+        
     @mock.patch('modules.realsense_d435.rs_d435._get_intrinsics')    
     def test_deprojection_matrix_shape(self, _):
         self.d435._intrin = mock.MagicMock()
@@ -56,6 +68,7 @@ class TestTemplate(TestCase):
         self.assertTrue(np.isnan(rtn[2]))
 
     @mock.patch('time.time')
+    @mock.patch('modules.realsense_d435.rs_d435._exception_handle')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
     @mock.patch('pyrealsense2.composite_frame.get_depth_frame')
     @mock.patch('pyrealsense2.composite_frame.get_color_frame')
@@ -65,7 +78,7 @@ class TestTemplate(TestCase):
     @mock.patch('modules.realsense_d435.rs_d435._deproject_frame')
     def test_get_frames(self, mock_deproject, mock_process, mock_color_data,
                         mock_depth_data, mock_get_color, mock_get_depth, mock_wait, 
-                        mock_time):
+                        mock_exception, mock_time):
         import pyrealsense2 as rs
         import numpy as np
 
@@ -92,13 +105,19 @@ class TestTemplate(TestCase):
         self.assertEqual(rtn_value[2],  1)
         self.assertEqual(rtn_value[3], 2)
 
-        #TODO: add is exception handling
         mock_color_data.side_effect = AttributeError()
         rtn_value = self.d435.get_frame()
-
-        #TODO: mock timeout
-
+        
+        mock_exception.assert_called()
         self.assertIsNone(rtn_value)
+
+        mock_exception.reset_mock()
+        mock_wait.side_effect = TimeoutError()
+        with self.assertRaises(TimeoutError):
+            self.d435.get_frame()
+
+        mock_exception.assert_called()
+        
 
     def test_fov_return(self):
         self.d435._FOV = 9
@@ -168,3 +187,5 @@ class TestTemplate(TestCase):
         self.assertEqual(self.d435._intrin, rs.intrinsics)
         self.assertEqual(self.d435._scale, mock_scale_value)
         self.assertEqual(self.d435._FOV, mocK_fov_value)
+
+# TODO: Add in testing for deprojection maths

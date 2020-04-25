@@ -44,6 +44,7 @@ class rs_d435:
     def __exit__(self, exception_type, exception_value, traceback):
         if traceback:
             print(traceback.tb_frame)
+            self._exception_handle("rs_d435: __exit__: `{}`".format(exception_value))
 
         self.close_connection()
     
@@ -63,8 +64,11 @@ class rs_d435:
 
         self._pipe = rs.pipeline()
         
-        # TODO: Add in timeout exception handling
-        self._pipe.start( cfg  )
+        try:
+            self._pipe.start(cfg)
+        except TimeoutError as e:
+            self._exception_handle("rs_d435: open_connection: failed to connect to camera")
+            raise e
 
         self._initialise_deprojection_matrix()
 
@@ -86,8 +90,11 @@ class rs_d435:
     Retrieve a data from the D435 camera
     """
     def get_frame(self) -> tuple:
-        #TODO: add in timeout exception handling
-        frames = self._pipe.wait_for_frames()
+        try:
+            frames = self._pipe.wait_for_frames()
+        except TimeoutError as e:         
+            self._exception_handle("rs_d435: getFrame: timeout waiting for data frame")
+            raise e
 
         depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
@@ -96,7 +103,7 @@ class rs_d435:
             depth_image = depth_frame.get_data()
             color_image = color_frame.get_data()
         except AttributeError:
-            # TODO: error about no data in frame
+            self._exception_handle("rs_d435: getFrame: frame contained no data")
             return None
 
         depth_image = np.asarray(depth_image, dtype=np.float32)
@@ -177,6 +184,12 @@ class rs_d435:
 
         return np.column_stack( (Z,X,Y) ) # Output as FRD coordinates
 
+    """
+    Function to collate interal class exceptions
+    TODO: Log error - requires rabbit MQ stuff
+    """
+    def _exception_handle(self, err):
+        print(err)
 
 if __name__ == "__main__": #pragma: no cover
     import cv2

@@ -29,6 +29,7 @@ class rs_t265:
     def __exit__(self, exception_type, exception_value, traceback):
         if traceback:
             print(traceback.tb_frame)
+            self._exception_handle("rs_t265: __exit__: `{}`".format(exception_value))
 
         self.close_connection()
 
@@ -41,8 +42,12 @@ class rs_t265:
 
         self._pipe = rs.pipeline()
 
-        # TODO: Add in timeout exception handling
-        self._pipe.start(cfg)
+        try:
+            self._pipe.start(cfg)
+        except TimeoutError as e:
+            self._exception_handle("rs_t265: getFrame: failed to connect to camera")
+            raise e
+
         print('rs_t265:T265 Connection Open')
 
     """
@@ -61,15 +66,18 @@ class rs_t265:
     Retrieve a data from the T265 camera
     """
     def get_frame(self) -> tuple:
-        # TODO: add in timeout exception handling
-        frames = self._pipe.wait_for_frames()
+        try:
+            frames = self._pipe.wait_for_frames()
+        except TimeoutError as e:
+            self._exception_handle("rs_t265: getFrame: timeout waiting for data frame")
+            raise e
 
         pose = frames.get_pose_frame()
 
         try:
             data = pose.get_pose_data()
         except AttributeError:
-            # TODO: error about no data in frame
+            self._exception_handle("rs_t265: getFrame: pose frame contains no data")
             return None
 
         pos = [data.translation.x, 
@@ -90,7 +98,7 @@ class rs_t265:
 
     """
     TODO: Add comments and test
-    TODO: Add method to convert to NED coordinates
+    TODO: Add NED coordinates
     """
     def _initialise_rotational_transforms(self):
         self.H_aeroRef_T265Ref = [[0,0,-1],[1,0,0],[0,-1,0]]
@@ -100,7 +108,6 @@ class rs_t265:
 
     """
     TODO: Add comments and test
-    TODO: Add method to convert to NED coordinates
     """
     def _convert_rotational_frame(self, quat) -> list:
         rot = self.H_aeroRef_T265Ref * R.from_quat(quat)  * self.H_T265body_aeroBody
@@ -109,10 +116,16 @@ class rs_t265:
 
     """
     TODO: Add comments and test
-    TODO: Add method to convert to NED coordinates
     """
     def _convert_positional_frame(self, pos) -> list:
         return self.H_aeroRef_T265Ref.apply(np.asarray(pos))
+
+    """
+    Function to collate interal class exceptions
+    TODO: Log error - requires rabbit MQ stuff
+    """
+    def _exception_handle(self, err):
+        print(err)
 
 if __name__ == "__main__": #pragma: no cover
     t265Obj = rs_t265()
