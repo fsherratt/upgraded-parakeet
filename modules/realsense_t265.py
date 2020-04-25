@@ -3,6 +3,7 @@ import sys
 import time
 
 import pyrealsense2 as rs
+from scipy.spatial.transform import Rotation as R
 
 class rs_t265:
     """
@@ -17,13 +18,13 @@ class rs_t265:
         
         self._initialise_rotational_transforms()
     """
-    with __enter__ method opens a connected to the T265 camera
+    With __enter__ method opens a connected to the T265 camera
     """
     def __enter__(self):
         self.open_connection()
 
     """
-    with __exit__ method closes the connection to the T265 camera
+    With __exit__ method closes the connection to the T265 camera
     """
     def __exit__(self, exception_type, exception_value, traceback):
         if traceback:
@@ -82,22 +83,38 @@ class rs_t265:
 
         conf = data.tracker_confidence
 
-        quat = self._convert_coordinate_frame(quat)
+        quat = self._convert_rotational_frame(quat)
+        pos = self._convert_positional_frame(pos)
 
         return (time.time(), pos, quat, conf)
 
+    """
+    TODO: Add comments and test
+    TODO: Add method to convert to NED coordinates
+    """
+    def _initialise_rotational_transforms(self):
+        self.H_aeroRef_T265Ref = [[0,0,-1],[1,0,0],[0,-1,0]]
+        self.H_aeroRef_T265Ref = R.from_matrix(self.H_aeroRef_T265Ref)
+
+        self.H_T265body_aeroBody = R.from_euler('x', self.tilt_deg, degrees=True) * self.H_aeroRef_T265Ref.inv()
+
+    """
+    TODO: Add comments and test
+    TODO: Add method to convert to NED coordinates
+    """
     def _convert_rotational_frame(self, quat) -> list:
         rot = self.H_aeroRef_T265Ref * R.from_quat(quat)  * self.H_T265body_aeroBody
 
         return rot.as_quat()
 
     """
+    TODO: Add comments and test
     TODO: Add method to convert to NED coordinates
     """
     def _convert_positional_frame(self, pos) -> list:
         return self.H_aeroRef_T265Ref.apply(np.asarray(pos))
 
-if __name__ == "__main__":   
+if __name__ == "__main__": #pragma: no cover
     t265Obj = rs_t265()
 
     with t265Obj:

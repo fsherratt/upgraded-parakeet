@@ -178,7 +178,7 @@ class rs_d435:
         return np.column_stack( (Z,X,Y) ) # Output as FRD coordinates
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": #pragma: no cover
     import cv2
 
     d435Obj = rs_d435()

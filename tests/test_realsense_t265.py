@@ -32,10 +32,13 @@ class TestTemplate(TestCase):
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
     @mock.patch('pyrealsense2.composite_frame.get_pose_frame')
     @mock.patch('pyrealsense2.pose_frame.get_pose_data')
-    @mock.patch('modules.realsense_t265.rs_t265._convert_coordinate_frame')
-    def test_get_frames(self, mock_coord_transform, mock_pose, mock_frame, mock_wait, mock_time):
+    @mock.patch('modules.realsense_t265.rs_t265._convert_rotational_frame')
+    @mock.patch('modules.realsense_t265.rs_t265._convert_positional_frame')
+    def test_get_frames(self, mock_pos_transform, mock_rot_transform, 
+                        mock_pose, mock_frame, mock_wait, mock_time):
         import pyrealsense2 as rs
-        mock_coord_transform.side_effect = (lambda x: x) 
+        mock_pos_transform.side_effect = (lambda x: x) 
+        mock_rot_transform.side_effect = (lambda x: x) 
         mock_wait.return_value = rs.composite_frame
         mock_frame.return_value = rs.pose_frame
 
@@ -62,7 +65,8 @@ class TestTemplate(TestCase):
         self.assertListEqual(rtn_value[2], [0,0,0,1])
         self.assertEqual(rtn_value[3], 3)
 
-        mock_coord_transform.assert_called()
+        mock_pos_transform.assert_called()
+        mock_rot_transform.assert_called()
         
         #TODO: Add in excetion handling
         mock_pose.side_effect = AttributeError()
@@ -71,7 +75,6 @@ class TestTemplate(TestCase):
         #TODO: Mock timeout
 
         self.assertIsNone(rtn_value)
-
 
     def test_convert_coordinate_frame(self):
         pass

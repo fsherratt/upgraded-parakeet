@@ -62,8 +62,10 @@ class TestTemplate(TestCase):
     @mock.patch('pyrealsense2.depth_frame.get_data')
     @mock.patch('pyrealsense2.video_frame.get_data')
     @mock.patch('modules.realsense_d435.rs_d435._process_depth_frame')
-    def test_get_frames(self, mock_process, mock_color_data, mock_depth_data,
-                        mock_get_color, mock_get_depth, mock_wait, mock_time):
+    @mock.patch('modules.realsense_d435.rs_d435._deproject_frame')
+    def test_get_frames(self, mock_deproject, mock_process, mock_color_data,
+                        mock_depth_data, mock_get_color, mock_get_depth, mock_wait, 
+                        mock_time):
         import pyrealsense2 as rs
         import numpy as np
 
@@ -72,19 +74,23 @@ class TestTemplate(TestCase):
         mock_wait.return_value = rs.composite_frame
         mock_get_depth.return_value = rs.depth_frame
         mock_get_color.return_value = rs.video_frame
-        mock_color_data.return_value = 1
+        mock_color_data.return_value = 2
         mock_depth_data.return_value = 1
 
         # Apply no transforms to the data
-        mock_process.side_effect = (lambda x: x) 
+        mock_process.side_effect = (lambda x: x)
+        mock_deproject.side_effect = (lambda x: 3)  
         
         self.d435._pipe = rs.pipeline()
         rtn_value = self.d435.get_frame()
         
         mock_process.assert_called()
+        mock_deproject.assert_called()
+
         self.assertEqual(rtn_value[0], 12)
-        self.assertEqual(rtn_value[1],  1)
-        self.assertEqual(rtn_value[2], 1)
+        self.assertEqual(rtn_value[1],  3)
+        self.assertEqual(rtn_value[2],  1)
+        self.assertEqual(rtn_value[3], 2)
 
         #TODO: add is exception handling
         mock_color_data.side_effect = AttributeError()
@@ -115,17 +121,15 @@ class TestTemplate(TestCase):
 
         rtn = self.d435._deproject_frame(frame)
 
-        self.assertEqual(rtn[0], 1)
-        self.assertEqual(rtn[1], 2)
-        self.assertEqual(rtn[2], 3)
+        self.assertEqual(rtn[0][0], 1)
+        self.assertEqual(rtn[0][1], 2)
+        self.assertEqual(rtn[0][2], 3)
 
     @mock.patch('modules.realsense_d435.rs_d435._scale_depth_frame')
     @mock.patch('modules.realsense_d435.rs_d435._limit_depth_range')
-    @mock.patch('modules.realsense_d435.rs_d435._deproject_frame')
-    def test_process_depth_frame(self, mock_deproject, mock_limit, mock_scale):
+    def test_process_depth_frame(self, mock_limit, mock_scale):
         self.d435._process_depth_frame(1)
 
-        mock_deproject.assert_called()
         mock_limit.assert_called()
         mock_scale.assert_called()
 
