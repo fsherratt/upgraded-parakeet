@@ -47,7 +47,7 @@ class rs_t265:
 
         try:
             self._pipe.start(cfg)
-        except TimeoutError as e:
+        except RuntimeError as e:
             self._exception_handle("rs_t265: getFrame: failed to connect to camera")
             raise e
 
@@ -71,7 +71,7 @@ class rs_t265:
     def get_frame(self) -> tuple:
         try:
             frames = self._pipe.wait_for_frames()
-        except TimeoutError as e:
+        except RuntimeError as e:
             self._exception_handle("rs_t265: getFrame: timeout waiting for data frame")
             raise e
 

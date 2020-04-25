@@ -44,8 +44,8 @@ class TestTemplate(TestCase):
         mock_exception.reset_mock()
 
         # 3. Check start timeout exception handling
-        mock_start.side_effect = TimeoutError()
-        with self.assertRaises(TimeoutError):
+        mock_start.side_effect = RuntimeError()
+        with self.assertRaises(RuntimeError):
             self.d435.open_connection()
         mock_exception.assert_called()
     
@@ -154,8 +154,8 @@ class TestTemplate(TestCase):
 
         # Test get frame timeout exception handling
         mock_exception.reset_mock()
-        mock_wait.side_effect = TimeoutError()
-        with self.assertRaises(TimeoutError):
+        mock_wait.side_effect = RuntimeError()
+        with self.assertRaises(RuntimeError):
             self.d435.get_frame()
 
         mock_exception.assert_called()

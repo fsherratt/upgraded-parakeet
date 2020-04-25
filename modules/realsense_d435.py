@@ -66,7 +66,7 @@ class rs_d435:
         
         try:
             self._pipe.start(cfg)
-        except TimeoutError as e:
+        except RuntimeError as e:
             self._exception_handle("rs_d435: open_connection: failed to connect to camera")
             raise e
 
@@ -92,7 +92,7 @@ class rs_d435:
     def get_frame(self) -> tuple:
         try:
             frames = self._pipe.wait_for_frames()
-        except TimeoutError as e:         
+        except RuntimeError as e:         
             self._exception_handle("rs_d435: getFrame: timeout waiting for data frame")
             raise e
 
