@@ -8,6 +8,9 @@ ARG REALSENSE_VERSION="2.34.0"
 ARG ARDUPILOT_TAG="Copter-4.0.3"
 ARG USERNAME=ERL
 
+WORKDIR /
+RUN mkdir workspaces
+
 RUN useradd -U -d /$USERNAME $USERNAME && \
     usermod -G users $USERNAME
 
@@ -19,11 +22,14 @@ apt-get install --no-install-recommends -y \
         git \
         wget \
         unzip \
-	yasm \
-	pkg-config \
-	software-properties-common \
-	lsb-release \
-	sudo
+		yasm \
+		pkg-config \
+		software-properties-common \
+		lsb-release \
+		sudo \
+		usbutils \
+		language-pack-en-base && \
+	dpkg-reconfigure locales
 
 ##################
 # Install Python #
@@ -32,14 +38,15 @@ RUN apt-get install -y python3 python3-pip python3-dev \
   && cd /usr/local/bin \
   && pip3 install --upgrade pip
 
-RUN pip3 install numpy pylint
+RUN pip3 install numpy pylint scipy coverage pytest
 
 ###################
 # Install Open CV #
 ###################
 WORKDIR /
 
-RUN apt-get install -y \
+RUN sudo apt-get update && \
+	apt-get install -y \
         pkg-config \
         libswscale-dev \
         libtbb2 \
@@ -48,7 +55,10 @@ RUN apt-get install -y \
         libpng-dev \
         libtiff-dev \
         libavformat-dev \
-        libpq-dev
+        libpq-dev \
+		libgtk2.0-dev \
+		libcanberra-gtk-module \
+		libcanberra-gtk3-module
 
 RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 && unzip ${OPENCV_VERSION}.zip \
@@ -57,13 +67,14 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 && cmake D CMAKE_BUILD_TYPE=RELEASE \
 	-D CMAKE_INSTALL_PREFIX=/usr/local \
 	-D OPENCV_ENABLE_NONFREE=ON \
-    	-D BUILD_PERF_TESTS=OFF \
-    	-D BUILD_TESTS=OFF \
-    	-D BUILD_DOCS=OFF \ 
+    -D BUILD_PERF_TESTS=OFF \
+    -D BUILD_TESTS=OFF \
+    -D BUILD_DOCS=OFF \ 
+	-D WITH_GTK=ON \
 	-D INSTALL_PYTHON_EXAMPLES=OFF \
 	-D BUILD_EXAMPLES=OFF \
 	-D WITH_TBB=ON \
-    	-D WITH_OPENMP=ON \
+    -D WITH_OPENMP=ON \
 	-D INSTALL_C_EXAMPLES=OFF \
   	-D PYTHON_EXECUTABLE=$(which python3) \
   	.. \
@@ -127,4 +138,4 @@ ENV PATH /ardupilot/.local/bin:$PATH
 WORKDIR "/ardupilot"
 RUN ./waf configure --board sitl && ./waf copter -j$(nproc)
 
-
+WORKDIR "/workspaces/"
