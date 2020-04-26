@@ -1,5 +1,6 @@
 # Rabbit MQ instruction set
 >RabbitMQ is the most widely deployed open source message broker.
+
 Rabbit MQ is a message broker. This means it listens for incoming data on a set of "exchanges" and publish the data recieved to these to any valid subscribers. This follows the standard software publish-subscriber pattern.
 
 ## Installation
