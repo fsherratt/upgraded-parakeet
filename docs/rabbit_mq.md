@@ -61,5 +61,5 @@ channel.start_consuming()
 ```
 
 ### Tutoirals and improvements
-[Rabbit MQ tutorial on Routing|https://www.rabbitmq.com/tutorials/tutorial-four-python.html]
-As an improvement, it might be worth converting them to topics as shown [here|https://www.rabbitmq.com/tutorials/tutorial-five-python.html], however this is currently assumed to be good enough.
+[Rabbit MQ tutorial on Routing,https://www.rabbitmq.com/tutorials/tutorial-four-python.html]
+As an improvement, it might be worth converting them to topics as shown [here,https://www.rabbitmq.com/tutorials/tutorial-five-python.html], however direct routing via routing key is currently assumed to be good enough.
