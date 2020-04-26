@@ -1,14 +1,16 @@
 # Rabbit MQ instruction set
-Rabbit MQ is a message queue system written it erlang.
+>RabbitMQ is the most widely deployed open source message broker.
+Rabbit MQ is a message broker. This means it listens for incoming data on a set of "exchanges" and publish the data recieved to these to any valid subscribers. This follows the standard software publish-subscriber pattern.
 
 ## Installation
 To install from the package cloud:
-First import PackageCloud signing key
-wget -O - "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey" | sudo apt-key add -
-Then run the install script
-curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
-The install rabbit mq server
-sudo apt-get update && sudo apt-get install rabbitmq-server -y --fix-missing
+
+* First import PackageCloud signing key
+	* wget -O - "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey" | sudo apt-key add -
+* Then run the install script
+	* curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
+* Then install rabbit mq server
+	* sudo apt-get update && sudo apt-get install rabbitmq-server -y --fix-missing
 
 ## How to use queues
 ### Queues in use
