@@ -38,7 +38,7 @@ RUN apt-get install -y python3 python3-pip python3-dev \
   && cd /usr/local/bin \
   && pip3 install --upgrade pip
 
-RUN pip3 install numpy pylint
+RUN pip3 install numpy pylint scipy coverage pytest
 
 ###################
 # Install Open CV #
