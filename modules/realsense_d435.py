@@ -3,34 +3,15 @@ import traceback
 import sys
 import time
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
-class rs_d435:
+class rs_pipeline:
     """
     Declare all the constants, tunable variables are public
     """
     def __init__(self):
-        # public
-        self.depth_width = 640
-        self.depth_height = 480
-
-        self.rgb_width = 640
-        self.rgb_height = 480
-
-        self.framerate = 30
-
-        self.min_range = 0.1
-        self.max_range = 10
-
         # private
         self._pipe = None
-
-        self._intrin = None
-        self._scale = 1
-
-        self._FOV = None
-
-        self._x_deproject_matrix = None
-        self._y_deproject_matrix = None
 
     """
     with enter method opens D435 connection
@@ -52,17 +33,8 @@ class rs_d435:
     Open Connection to D435 camera
     """
     def open_connection(self):
-        cfg = rs.config()
-        cfg.enable_stream(rs.stream.depth, 
-                                self.depth_width, self.depth_height,
-                                rs.format.z16, 
-                                self.framerate )
-        cfg.enable_stream(rs.stream.color, 
-                                self.rgb_width, self.rgb_height, 
-                                rs.format.bgr8, 
-                                self.framerate)
-
         self._pipe = rs.pipeline()
+        cfg = self.generate_config()
         
         try:
             self._pipe.start(cfg)
@@ -70,9 +42,9 @@ class rs_d435:
             self._exception_handle("rs_d435: open_connection: failed to connect to camera")
             raise e
 
-        self._initialise_deprojection_matrix()
+        self.post_connect_process()
 
-        print('rs_d435:D435 Connection Open')
+        print('rs_pipeline:{} Connection Open'.format(__name__))
     
     """
     Close connection to D435 camera
@@ -89,30 +61,96 @@ class rs_d435:
     """
     Retrieve a data from the D435 camera
     """
-    def get_frame(self) -> tuple:
+    def wait_for_frame(self) -> tuple:
         try:
             frames = self._pipe.wait_for_frames()
         except RuntimeError as e:         
             self._exception_handle("rs_d435: getFrame: timeout waiting for data frame")
             raise e
-
-        depth_frame = frames.get_depth_frame()
-        color_frame = frames.get_color_frame()
+        
+        # Bespoke
+        frame = self.get_frame(frames)
+        # End
 
         try:
-            depth_image = depth_frame.get_data()
-            color_image = color_frame.get_data()
-        except AttributeError:
+            data = self.get_data(frame)
+        except RuntimeError:
             self._exception_handle("rs_d435: getFrame: frame contained no data")
             return None
 
-        depth_image = np.asarray(depth_image, dtype=np.float32)
-        color_image = np.asanyarray(color_image, dtype=np.uint8)
+        # Post Process
+        data = self.post_process(data)
 
-        depth_image = self._process_depth_frame(depth_image)
-        depth_points = self._deproject_frame(depth_image)
+        # End
+        return (time.time(), data)
 
-        return (time.time(), depth_points, depth_image, color_image)
+    """
+    Function to collate interal class exceptions
+    TODO: Log error - requires rabbit MQ stuff
+    """
+    def _exception_handle(self, err):
+        print(err)
+
+    # Functions to Overload
+    def generate_config(self) -> rs.config:
+        raise NotImplementedError
+    
+    def post_connect_process(self):
+        return
+
+    def get_frame(self, frames):
+        raise NotImplementedError
+    
+    def get_data(self, frame):
+        return frame.get_data()
+
+    def post_process(self, data):
+        return data
+
+class depth_pipeline(rs_pipeline):
+    """
+    Declare all the constants, tunable variables are public
+    """
+    def __init__(self):
+        super().__init__()
+
+        # public
+        self.depth_width = 640
+        self.depth_height = 480
+
+        self.framerate = 6
+
+        self.min_range = 0.1
+        self.max_range = 10
+
+        # private
+        self._intrin = None
+        self._scale = 1
+
+        self._FOV = None
+
+        self._x_deproject_matrix = None
+        self._y_deproject_matrix = None
+
+    def generate_config(self) -> rs.config:
+        cfg = rs.config()
+        cfg.enable_stream(rs.stream.depth, 
+                                self.depth_width, self.depth_height,
+                                rs.format.z16, 
+                                self.framerate )
+        return cfg
+
+    def post_connect_process(self):
+        self._initialise_deprojection_matrix()
+
+    def get_frame(self, frames):
+        return frames.get_depth_frame()
+
+    def post_process(self, data):
+        data = np.asarray(data, dtype=np.float32)
+        data = self._process_depth_frame(data)
+
+        return data
 
     """
     Returns the FOV of the connected camera
@@ -184,26 +222,156 @@ class rs_d435:
 
         return np.column_stack( (Z,X,Y) ) # Output as FRD coordinates
 
+class color_pipeline(rs_pipeline):
     """
-    Function to collate interal class exceptions
-    TODO: Log error - requires rabbit MQ stuff
+    Declare all the constants, tunable variables are public
     """
-    def _exception_handle(self, err):
-        print(err)
+    def __init__(self):
+        super().__init__()
+
+        # public
+        self.rgb_width = 640
+        self.rgb_height = 480
+
+        self.framerate = 30
+
+    def generate_config(self) -> rs.config:
+        cfg = rs.config()
+        cfg.enable_stream(rs.stream.color, 
+                                self.rgb_width, self.rgb_height, 
+                                rs.format.bgr8, 
+                                self.framerate)
+        return cfg
+
+    def get_frame(self, frames:rs.composite_frame):
+        return frames.get_color_frame()
+
+    def post_process(self, data):
+        return np.asarray(data, dtype=np.uint8)
+
+class pose_pipeline(rs_pipeline):
+    def __init__(self):
+        super().__init__()
+
+        # Public
+        self.tilt_deg = 0
+        self.North_offset = 0
+
+        # Private
+        self._pipe = None
+        self.H_aeroRef_T265Ref = None
+        self.H_T265body_aeroBody = None
+        
+        self._initialise_rotational_transforms()
+
+    def generate_config(self) -> rs.config:
+        cfg = rs.config()
+        cfg.enable_stream(rs.stream.pose)
+        return cfg
+        
+    def get_frame(self, frames):
+        return frames.get_pose_frame()
+
+    def get_data(self, frame):
+        return frame.get_pose_data()
+
+    def post_process(self, data):
+        pos = [data.translation.x, 
+                data.translation.y, 
+                data.translation.z]
+
+        quat = [data.rotation.x, 
+                data.rotation.y, 
+                data.rotation.z, 
+                data.rotation.w]
+
+        conf = data.tracker_confidence
+
+        quat = self._convert_rotational_frame(quat)
+        pos = self._convert_positional_frame(pos)
+
+        return (pos, quat, conf)
+
+    """
+    Initialise rotational transforms between tilted T265 and NED aero body and ref frames
+    """
+    def _initialise_rotational_transforms(self):
+        H_aeroNEDRef_aeroRef = R.from_euler('z', self.North_offset, degrees=True)
+        H_aeroRef_T265Ref = R.from_matrix([[0,0,-1],[1,0,0],[0,-1,0]])
+        H_T265Tilt_T265Body = R.from_euler('x', self.tilt_deg, degrees=True)
+        
+        self.H_aeroRef_T265Ref = H_aeroNEDRef_aeroRef * H_aeroRef_T265Ref
+        self.H_T265body_aeroBody = H_T265Tilt_T265Body * H_aeroRef_T265Ref.inv()
+
+    """
+    Convert T265 rotational frame to aero NED frame
+    """
+    def _convert_rotational_frame(self, quat) -> list:
+        rot = self.H_aeroRef_T265Ref * R.from_quat(quat)  * self.H_T265body_aeroBody
+
+        return rot.as_quat()
+
+    """
+    Convert T264 translation frame to aero NED translation
+    """
+    def _convert_positional_frame(self, pos) -> list:
+        return self.H_aeroRef_T265Ref.apply(pos)
+
+
+def depth_loop():
+    import cv2
+    global Running
+
+    depth_obj = depth_pipeline()
+    with depth_obj:
+        while Running:
+            depth_frame = depth_obj.wait_for_frame()
+            depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame[1], alpha=50), cv2.COLORMAP_JET)
+            cv2.imshow('depth_frame', depth_frame)
+            cv2.waitKey(1)
+
+def color_loop():
+    import cv2
+    global Running
+
+    color_obj = color_pipeline()
+    with color_obj:
+        while Running:
+            color_frame = color_obj.wait_for_frame()
+            cv2.imshow('color_frame', color_frame[1])
+            cv2.waitKey(1)
+
+def pose_loop():
+    global Running
+    pose_obj = pose_pipeline()
+    with pose_obj:
+        while Running:
+            pose_frame  = pose_obj.wait_for_frame()
+            print(pose_frame[1])
+            time.sleep(0.1)
+
+import signal
+import threading
+
+def stop_running(sig, frame):
+    global Running
+    Running = False
 
 if __name__ == "__main__": #pragma: no cover
-    import cv2
+    global Running
+    Running = True
 
-    d435Obj = rs_d435()
+    signal.signal(signal.SIGINT, handler=stop_running)
 
-    with d435Obj:
-        while True:
-            frame = d435Obj.get_frame()
+    depth_thread = threading.Thread(target=depth_loop)
+    depth_thread.start()
 
-            depth = frame[2]
-            depth = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=50), cv2.COLORMAP_JET)
+    color_thread = threading.Thread(target=color_loop)
+    color_thread.start()
 
-            np.nan_to_num(depth, nan=0)
-            cv2.imshow('depth_frame', depth)
-            cv2.imshow('color_frame', frame[3])
-            cv2.waitKey(1)
+    pose_thread = threading.Thread(target=pose_loop)
+    pose_thread.start()
+
+    signal.pause()
+    time.sleep(0.5)
+    print('Stopping')
