@@ -68,9 +68,7 @@ class rs_pipeline:
             self._exception_handle("rs_d435: getFrame: timeout waiting for data frame")
             raise e
         
-        # Bespoke
         frame = self.get_frame(frames)
-        # End
 
         try:
             data = self.get_data(frame)
