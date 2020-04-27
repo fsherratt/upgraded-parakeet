@@ -22,7 +22,7 @@ class TestTemplate(TestCase):
         sys.argv = [__name__, 'test={}'.format(self.test_value)] # Mock CLI inpuut
         conf = load_config()
         
-        self.assertEquals(conf.test, self.test_value)
+        self.assertEqual(conf.test, self.test_value)
 
     def test_invalid_file(self):
         with self.assertRaises(FileNotFoundError):
@@ -34,4 +34,4 @@ class TestTemplate(TestCase):
 
         conf = load_config(self.test_filename)
 
-        self.assertEquals(conf.test, self.test_value)
+        self.assertEqual(conf.test, self.test_value)
