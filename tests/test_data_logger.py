@@ -3,7 +3,7 @@ from unittest import TestCase, mock
 
 from modules.data_logger import LoggingInterface, FileLogger
 
-class TestTemplate(TestCase):
+class TestDataLogger(TestCase):
     def setUp(self):
         self.logObj = LoggingInterface()
     

@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from modules.load_config import load_config 
 
-class TestTemplate(TestCase):
+class TestLoadConfig(TestCase):
     def setUp(self):
         self.test_filename = 'conf/test.yaml'
         self.test_invalid_filename = 'conf/not_a_file.yaml'

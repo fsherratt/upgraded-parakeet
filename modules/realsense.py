@@ -116,7 +116,7 @@ class depth_pipeline(rs_pipeline):
         self.depth_width = 640
         self.depth_height = 480
 
-        self.framerate = 6
+        self.framerate = 60
 
         self.min_range = 0.1
         self.max_range = 10
@@ -133,9 +133,9 @@ class depth_pipeline(rs_pipeline):
     def generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.depth, 
-                                self.depth_width, self.depth_height,
-                                rs.format.z16, 
-                                self.framerate )
+                            self.depth_width, self.depth_height,
+                            rs.format.z16, 
+                            self.framerate )
         return cfg
 
     def post_connect_process(self):
@@ -231,7 +231,7 @@ class color_pipeline(rs_pipeline):
         self.rgb_width = 640
         self.rgb_height = 480
 
-        self.framerate = 30
+        self.framerate = 60
 
     def generate_config(self) -> rs.config:
         cfg = rs.config()
@@ -315,47 +315,46 @@ class pose_pipeline(rs_pipeline):
     def _convert_positional_frame(self, pos) -> list:
         return self.H_aeroRef_T265Ref.apply(pos)
 
-
-def depth_loop():
-    import cv2
-    global Running
-
-    depth_obj = depth_pipeline()
-    with depth_obj:
-        while Running:
-            depth_frame = depth_obj.wait_for_frame()
-            depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame[1], alpha=50), cv2.COLORMAP_JET)
-            cv2.imshow('depth_frame', depth_frame)
-            cv2.waitKey(1)
-
-def color_loop():
-    import cv2
-    global Running
-
-    color_obj = color_pipeline()
-    with color_obj:
-        while Running:
-            color_frame = color_obj.wait_for_frame()
-            cv2.imshow('color_frame', color_frame[1])
-            cv2.waitKey(1)
-
-def pose_loop():
-    global Running
-    pose_obj = pose_pipeline()
-    with pose_obj:
-        while Running:
-            pose_frame  = pose_obj.wait_for_frame()
-            print(pose_frame[1])
-            time.sleep(0.1)
-
-import signal
-import threading
-
-def stop_running(sig, frame):
-    global Running
-    Running = False
-
 if __name__ == "__main__": #pragma: no cover
+    import signal
+    import threading
+
+    def depth_loop():
+        import cv2
+        global Running
+
+        depth_obj = depth_pipeline()
+        with depth_obj:
+            while Running:
+                depth_frame = depth_obj.wait_for_frame()
+                depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame[1], alpha=50), cv2.COLORMAP_JET)
+                cv2.imshow('depth_frame', depth_frame)
+                cv2.waitKey(1)
+
+    def color_loop():
+        import cv2
+        global Running
+
+        color_obj = color_pipeline()
+        with color_obj:
+            while Running:
+                color_frame = color_obj.wait_for_frame()
+                cv2.imshow('color_frame', color_frame[1])
+                cv2.waitKey(1)
+
+    def pose_loop():
+        global Running
+        pose_obj = pose_pipeline()
+        with pose_obj:
+            while Running:
+                pose_frame  = pose_obj.wait_for_frame()
+                print(pose_frame[1])
+                time.sleep(0.1)
+
+    def stop_running(sig, frame):
+        global Running
+        Running = False
+
     global Running
     Running = True
 

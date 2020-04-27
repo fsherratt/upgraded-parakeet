@@ -14,7 +14,6 @@ class TestRSPipeline(TestCase):
     Can mocked pipe connection be made and close succesfully
     Test elegant exception handling during each event
     """
-    
     @mock.patch('modules.realsense.rs_pipeline._exception_handle')
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
@@ -51,7 +50,6 @@ class TestRSPipeline(TestCase):
     """
     Check get frame order of operation and exception handling
     """
-    
     @mock.patch('modules.realsense.rs_pipeline._exception_handle')
     @mock.patch('modules.realsense.rs_pipeline.post_process')
     @mock.patch('modules.realsense.rs_pipeline.get_data')
@@ -107,6 +105,16 @@ class TestDepthPipeline(TestCase):
     
     def tearDown(self):
         pass
+
+    """
+    Test that a depth stream is requested
+    """
+    @mock.patch('pyrealsense2.config.enable_stream')
+    def test_stream_config(self, mock_config):
+        import pyrealsense2 as rs
+        cfg = self.pipeline.generate_config()
+
+        self.assertEqual(mock_config.call_args[0][0], rs.stream.depth)
 
     """
     Test FOV getter function
@@ -251,6 +259,16 @@ class TestColorPipeline(TestCase):
     
     def tearDown(self):
         pass
+
+    """
+    Test that a color stream is requested
+    """
+    @mock.patch('pyrealsense2.config.enable_stream')
+    def test_stream_config(self, mock_config):
+        import pyrealsense2 as rs
+        cfg = self.pipeline.generate_config()
+
+        self.assertEqual(mock_config.call_args[0][0], rs.stream.color)
     
     @mock.patch('pyrealsense2.composite_frame.get_color_frame')
     def test_get_frame(self, mock_get_color):
@@ -264,6 +282,17 @@ class TestPosPipeline(TestCase):
     
     def tearDown(self):
         pass
+
+    """
+    Test that a pose stream is requested
+    """
+    @mock.patch('pyrealsense2.config.enable_stream')
+    def test_stream_config(self, mock_config):
+        import pyrealsense2 as rs
+        cfg = self.pipeline.generate_config()
+
+        self.assertEqual(mock_config.call_args[0][0], rs.stream.pose)
+    
     """
     Check get frame order of operation and exception handling
     """

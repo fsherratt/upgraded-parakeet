@@ -3,7 +3,7 @@ import unittest
 
 from modules import test
 
-class TestTemplate(unittest.TestCase):
+class UnitTestExample(unittest.TestCase):
     def setUp(self):
         pass
     
