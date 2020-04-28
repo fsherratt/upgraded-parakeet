@@ -80,7 +80,7 @@ class rs_pipeline:
         data = self.post_process(data)
 
         # End
-        return (time.time(), data)
+        return data
 
     """
     Function to collate interal class exceptions
@@ -145,8 +145,10 @@ class depth_pipeline(rs_pipeline):
         return frames.get_depth_frame()
 
     def post_process(self, data):
-        data = np.asarray(data, dtype=np.float32)
-        data = self._process_depth_frame(data)
+        timestamp = time.time()
+        depth = np.asarray(data, dtype=np.uint16)
+        intrin =  (self._scale, self._intrin.ppx, self._intrin.ppy, self._intrin.fx, self._intrin.fy)
+        data = (timestamp, depth, intrin)
 
         return data
 
@@ -171,54 +173,6 @@ class depth_pipeline(rs_pipeline):
                         .get_depth_scale()
                         
         self._FOV = rs.rs2_fov(self._intrin)
-
-    """
-    Initialise conversion matrix for converting the depth frame to a de-projected 3D 
-    coordinate system
-    """
-    def _initialise_deprojection_matrix(self):
-        self._get_intrinsics()
-        
-        x_deproject_row = (np.arange( self.depth_width ) - self._intrin.ppx) / self._intrin.fx
-        y_deproject_col = (np.arange( self.depth_height ) - self._intrin.ppy) / self._intrin.fy
-
-        self._x_deproject_matrix = np.tile( x_deproject_row, (self.depth_height, 1) )
-        self._y_deproject_matrix = np.tile( y_deproject_col, (self.depth_width, 1) ).transpose()
-
-    """
-    Perform data pre-processing to depth frame
-    """
-    def _process_depth_frame(self, frame:np.array):
-        frame = self._scale_depth_frame(frame)
-        frame = self._limit_depth_range(frame)
-        return frame
-
-    """
-    Scale the depth output to meteres
-    """
-    def _scale_depth_frame(self, frame:np.array):
-        return frame * self._scale
-
-    """
-    Limit the maximum/minimum range of the depth camera
-    """
-    def _limit_depth_range(self, frame:np.array):
-        frame[ np.logical_or(frame < self.min_range, frame > self.max_range) ] = np.nan
-        return frame
-
-    """
-    Converts from depth frame to 3D local FED coordiate system
-    """
-    def _deproject_frame(self, frame:np.array) -> list:       
-        Z = frame
-        X = np.multiply( frame, self._x_deproject_matrix )
-        Y = np.multiply( frame, self._y_deproject_matrix )
-
-        Z = np.reshape(Z, (-1))
-        X = np.reshape(X, (-1))
-        Y = np.reshape(Y, (-1))
-
-        return np.column_stack( (Z,X,Y) ) # Output as FRD coordinates
 
 class color_pipeline(rs_pipeline):
     """
@@ -245,7 +199,10 @@ class color_pipeline(rs_pipeline):
         return frames.get_color_frame()
 
     def post_process(self, data):
-        return np.asarray(data, dtype=np.uint8)
+        timestamp = time.time()
+        image = np.asarray(data, dtype=np.uint8)
+
+        return (timestamp, image)
 
 class pose_pipeline(rs_pipeline):
     def __init__(self):
@@ -274,6 +231,8 @@ class pose_pipeline(rs_pipeline):
         return frame.get_pose_data()
 
     def post_process(self, data):
+        timestamp = time.time()
+
         pos = [data.translation.x, 
                 data.translation.y, 
                 data.translation.z]
@@ -288,7 +247,7 @@ class pose_pipeline(rs_pipeline):
         quat = self._convert_rotational_frame(quat)
         pos = self._convert_positional_frame(pos)
 
-        return (pos, quat, conf)
+        return (timestamp, pos, quat, conf)
 
     """
     Initialise rotational transforms between tilted T265 and NED aero body and ref frames
@@ -360,13 +319,13 @@ if __name__ == "__main__": #pragma: no cover
 
     signal.signal(signal.SIGINT, handler=stop_running)
 
-    depth_thread = threading.Thread(target=depth_loop)
+    depth_thread = threading.Thread(target=depth_loop, name='Depth_Thread')
     depth_thread.start()
 
-    color_thread = threading.Thread(target=color_loop)
+    color_thread = threading.Thread(target=color_loop, name='Color_Thread')
     color_thread.start()
 
-    pose_thread = threading.Thread(target=pose_loop)
+    pose_thread = threading.Thread(target=pose_loop, name='Pose_Thread')
     pose_thread.start()
 
     signal.pause()

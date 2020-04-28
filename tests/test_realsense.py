@@ -55,8 +55,7 @@ class TestRSPipeline(TestCase):
     @mock.patch('modules.realsense.rs_pipeline.get_data')
     @mock.patch('modules.realsense.rs_pipeline.get_frame')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
-    @mock.patch('time.time', return_value=1)
-    def test_wait_for_frame(self, mock_time, mock_wait, mock_get_frame,  
+    def test_wait_for_frame(self, mock_wait, mock_get_frame,  
                             mock_get_data, mock_post, mock_exception):
         # Setup mock enviroment
         import pyrealsense2 as rs
@@ -66,13 +65,11 @@ class TestRSPipeline(TestCase):
         mock_get_data_return = 'MOCK_DATA'
         mock_post_return = 'MOCK_POST'
         mock_wait_return = 'MOCK_WAIT'
-        mock_time_return = 12
 
         mock_wait.return_value = mock_wait_return
         mock_get_frame.return_value = mock_get_frame_return
         mock_get_data.return_value = mock_get_data_return
         mock_post.return_value = mock_post_return
-        mock_time.return_value = mock_time_return
 
         # Test full order of operations
         rtn_value = self.pipeline.wait_for_frame()
@@ -82,8 +79,7 @@ class TestRSPipeline(TestCase):
         mock_get_data.assert_called_with(mock_get_frame_return)
         mock_post.assert_called_with(mock_get_data_return)
 
-        self.assertEqual(rtn_value[0], mock_time_return)
-        self.assertEqual(rtn_value[1],  mock_post_return)
+        self.assertEqual(rtn_value, mock_post_return)
 
         # Test empty data frame exception handling
         mock_get_data.side_effect = RuntimeError()
@@ -117,6 +113,33 @@ class TestDepthPipeline(TestCase):
         self.assertEqual(mock_config.call_args[0][0], rs.stream.depth)
 
     """
+    Check get frame order of operation and exception handling
+    """
+    @mock.patch('time.time')
+    def test_post_process(self, mock_time):
+        import pyrealsense2 as rs
+
+        mock_time_return = 12
+        mock_intrin_return = (1, 2, 3, 4, 5)
+        mock_data = 32
+
+        mock_time.return_value = mock_time_return
+        self.pipeline._scale = mock_intrin_return[0]
+        self.pipeline._intrin = mock.MagicMock()
+        self.pipeline._intrin.ppx = mock_intrin_return[1]
+        self.pipeline._intrin.ppy = mock_intrin_return[2]
+        self.pipeline._intrin.fx = mock_intrin_return[3]
+        self.pipeline._intrin.fy = mock_intrin_return[4]
+        
+
+        # Test full order of operations
+        rtn_value = self.pipeline.post_process(mock_data)
+
+        self.assertEqual(rtn_value[0], mock_time_return)
+        self.assertEqual(rtn_value[1], mock_data)
+        self.assertEqual(rtn_value[2], mock_intrin_return)
+
+    """
     Test FOV getter function
     """
     def test_fov_return(self):
@@ -124,42 +147,6 @@ class TestDepthPipeline(TestCase):
         rtn = self.pipeline.get_fov()
 
         self.assertEqual(self.pipeline._FOV, rtn)
-
-    """
-    Test depth scale function
-    """
-    def test_scale_result(self):
-        self.pipeline._scale = 10
-        rtn = self.pipeline._scale_depth_frame(1)
-
-        self.assertEqual(rtn, self.pipeline._scale)
-
-    """
-    Test depth frame deprojection application function
-    """
-    def test_deprojection_result(self):
-        import numpy as np
-        self.pipeline._x_deproject_matrix = np.asarray([2])
-        self.pipeline._y_deproject_matrix = np.asarray([3])
-
-        frame = np.asarray([1])
-
-        rtn = self.pipeline._deproject_frame(frame)
-
-        self.assertEqual(rtn[0][0], 1)
-        self.assertEqual(rtn[0][1], 2)
-        self.assertEqual(rtn[0][2], 3)
-
-    """
-    Test process depth frame calls required methods - Probably a stupid test
-    """
-    @mock.patch('modules.realsense.depth_pipeline._scale_depth_frame')
-    @mock.patch('modules.realsense.depth_pipeline._limit_depth_range')
-    def test_process_depth_frame(self, mock_limit, mock_scale):
-        self.pipeline._process_depth_frame(1)
-
-        mock_limit.assert_called()
-        mock_scale.assert_called()
 
     """
     Test get intrinsics order of operations
@@ -198,60 +185,6 @@ class TestDepthPipeline(TestCase):
         self.assertEqual(self.pipeline._intrin, rs.intrinsics)
         self.assertEqual(self.pipeline._scale, mock_scale_value)
         self.assertEqual(self.pipeline._FOV, mocK_fov_value)
-
-
-    """ 
-    Check deprojection matrix is initialised correctly
-    """
-    @mock.patch('modules.realsense.depth_pipeline._get_intrinsics')    
-    def test_deprojection_matrix(self, _):
-        self.pipeline.depth_width = 640
-        self.pipeline.depth_height = 480
-
-        self.pipeline._intrin = mock.MagicMock()
-        self.pipeline._intrin.ppx = 319.5
-        self.pipeline._intrin.ppy = 239.5
-        self.pipeline._intrin.fx = 2
-        self.pipeline._intrin.fy = 2
-
-        self.pipeline._initialise_deprojection_matrix()
-
-        # Check it is initialised in the correct shape
-        self.assertEqual(self.pipeline._x_deproject_matrix.shape, 
-                        (self.pipeline.depth_height, self.pipeline.depth_width))
-        self.assertEqual(self.pipeline._y_deproject_matrix.shape, 
-                        (self.pipeline.depth_height, self.pipeline.depth_width))
-
-        # Check maths (x - ppx)/fx & (y - ppy)/fy
-        cell_x = self.pipeline._x_deproject_matrix[0][0]
-        cell_y = self.pipeline._y_deproject_matrix[0][0]
-        self.assertEqual(cell_x, -159.75)
-        self.assertEqual(cell_y, -119.75)
-
-        # Check maths (x - ppx)/fx & (y - ppy)/fy
-        cell_x = self.pipeline._x_deproject_matrix[479][639]
-        cell_y = self.pipeline._y_deproject_matrix[479][639]
-        self.assertEqual(cell_x, 159.75)
-        self.assertEqual(cell_y, 119.75)
-
-    """
-    Check depth frame data is filtered correctly to within specified range
-    """
-    def test_depth_range_limit(self):
-        import numpy as np
-        self.pipeline.min_range = 5
-        self.pipeline.max_range = 10
-        
-        low_value = 4
-        mid_value = 7
-        high_value = 11
-
-        test_array = np.asarray([low_value, mid_value, high_value], dtype=np.float32)
-        rtn = self.pipeline._limit_depth_range(test_array)
-
-        self.assertTrue(np.isnan(rtn[0]))
-        self.assertEqual(rtn[1], test_array[1])
-        self.assertTrue(np.isnan(rtn[2]))
 
 class TestColorPipeline(TestCase):
     def setUp(self):
@@ -296,14 +229,16 @@ class TestPosPipeline(TestCase):
     """
     Check get frame order of operation and exception handling
     """
+    @mock.patch('time.time')
     @mock.patch('modules.realsense.pose_pipeline._convert_rotational_frame')
     @mock.patch('modules.realsense.pose_pipeline._convert_positional_frame')
-    def test_post_process(self, mock_pos_transform, mock_rot_transform):
+    def test_post_process(self, mock_pos_transform, mock_rot_transform, mock_time):
         import pyrealsense2 as rs
 
         mock_tranlation_return =[1,2,3]
         mock_quat_return = [0,0,0,1]
         mock_conf_return = 3
+        mock_time_return = 12
 
         data = mock.PropertyMock()
         type(data.translation).x = mock.PropertyMock(return_value=mock_tranlation_return[0])
@@ -319,12 +254,15 @@ class TestPosPipeline(TestCase):
         mock_pos_transform.side_effect = (lambda x: x) 
         mock_rot_transform.side_effect = (lambda x: x) 
 
+        mock_time.return_value = mock_time_return
+
         # Test full order of operations
         rtn_value = self.pipeline.post_process(data)
 
-        self.assertListEqual(rtn_value[0], mock_tranlation_return)
-        self.assertListEqual(rtn_value[1], mock_quat_return)
-        self.assertEqual(rtn_value[2], mock_conf_return)
+        self.assertEqual(rtn_value[0], mock_time_return)
+        self.assertListEqual(rtn_value[1], mock_tranlation_return)
+        self.assertListEqual(rtn_value[2], mock_quat_return)
+        self.assertEqual(rtn_value[3], mock_conf_return)
 
         mock_pos_transform.assert_called()
         mock_rot_transform.assert_called()
