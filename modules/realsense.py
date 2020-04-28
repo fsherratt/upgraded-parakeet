@@ -12,6 +12,7 @@ class rs_pipeline:
     def __init__(self):
         # private
         self._pipe = None
+        self._object_name = 'Untitled'
 
     """
     with enter method opens D435 connection
@@ -39,12 +40,12 @@ class rs_pipeline:
         try:
             self._pipe.start(cfg)
         except RuntimeError as e:
-            self._exception_handle("rs_d435: open_connection: failed to connect to camera")
+            self._exception_handle("rs_pipeline:{}: failed to connect to camera".format(self._object_name))
             raise e
 
         self.post_connect_process()
 
-        print('rs_pipeline:{} Connection Open'.format(__name__))
+        print('rs_pipeline:{}: Connection Open'.format(self._object_name))
     
     """
     Close connection to D435 camera
@@ -56,7 +57,7 @@ class rs_pipeline:
         self._pipe.stop()
         self._pipe = None
 
-        print('rs_d435:D435 Connection Closed')
+        print('rs_pipeline:{}: Connection Closed'.format(self._object_name))
 
     """
     Retrieve a data from the D435 camera
@@ -65,7 +66,7 @@ class rs_pipeline:
         try:
             frames = self._pipe.wait_for_frames()
         except RuntimeError as e:         
-            self._exception_handle("rs_d435: getFrame: timeout waiting for data frame")
+            self._exception_handle("rs_pipeline:{}:wait_for_frame: Timeout waiting for data frame".format(self._object_name))
             raise e
         
         frame = self.get_frame(frames)
@@ -73,7 +74,7 @@ class rs_pipeline:
         try:
             data = self.get_data(frame)
         except RuntimeError:
-            self._exception_handle("rs_d435: getFrame: frame contained no data")
+            self._exception_handle("rs_pipeline:{}:wait_for_frame: Frame contained no data".format(self._object_name))
             return None
 
         # Post Process
@@ -118,17 +119,11 @@ class depth_pipeline(rs_pipeline):
 
         self.framerate = 60
 
-        self.min_range = 0.1
-        self.max_range = 10
-
         # private
+        self._object_name = 'Depth'
+
         self._intrin = None
         self._scale = 1
-
-        self._FOV = None
-
-        self._x_deproject_matrix = None
-        self._y_deproject_matrix = None
 
     def generate_config(self) -> rs.config:
         cfg = rs.config()
@@ -139,7 +134,7 @@ class depth_pipeline(rs_pipeline):
         return cfg
 
     def post_connect_process(self):
-        self._initialise_deprojection_matrix()
+        self._get_intrinsics()
 
     def get_frame(self, frames):
         return frames.get_depth_frame()
@@ -187,6 +182,9 @@ class color_pipeline(rs_pipeline):
 
         self.framerate = 60
 
+        # private
+        self._object_name = 'Color'
+
     def generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.color, 
@@ -213,7 +211,8 @@ class pose_pipeline(rs_pipeline):
         self.North_offset = 0
 
         # Private
-        self._pipe = None
+        self._object_name = 'Pose'
+
         self.H_aeroRef_T265Ref = None
         self.H_T265body_aeroBody = None
         
@@ -286,7 +285,12 @@ if __name__ == "__main__": #pragma: no cover
         with depth_obj:
             while Running:
                 depth_frame = depth_obj.wait_for_frame()
-                depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame[1], alpha=50), cv2.COLORMAP_JET)
+
+                if depth_frame is None:
+                    continue
+
+                depth_frame = depth_frame[1] * depth_frame[2][0]
+                depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame, alpha=50), cv2.COLORMAP_JET)
                 cv2.imshow('depth_frame', depth_frame)
                 cv2.waitKey(1)
 
@@ -298,6 +302,10 @@ if __name__ == "__main__": #pragma: no cover
         with color_obj:
             while Running:
                 color_frame = color_obj.wait_for_frame()
+
+                if color_frame is None:
+                    continue
+
                 cv2.imshow('color_frame', color_frame[1])
                 cv2.waitKey(1)
 
@@ -307,7 +315,11 @@ if __name__ == "__main__": #pragma: no cover
         with pose_obj:
             while Running:
                 pose_frame  = pose_obj.wait_for_frame()
-                print(pose_frame[1])
+
+                if pose_frame is None:
+                    continue
+
+                # print(pose_frame[1])
                 time.sleep(0.1)
 
     def stop_running(sig, frame):
