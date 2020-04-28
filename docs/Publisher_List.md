@@ -24,3 +24,4 @@
 - quat_y (float32)
 - quat_z (float32)
 - quat_w (float32)
+- conf (uint8)
