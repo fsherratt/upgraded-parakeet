@@ -6,10 +6,40 @@
 - [T265 Maths](#t265)
 
 # <a name="pipeline"></a>Using the Pipeline
-The realsense pipeline module [Insert link to module]() connects the realsense cameras to rabbit mq.
+The realsense pipeline module _[modules/realsense.py]()_ connects the realsense cameras to rabbit mq. Individual streams can be enable and disabled indepentendly
 
-## Published data
-Description of published data. Data structure available here, [Publisher List]()
+## Starting Up
+**TODO:**
+To begin streaming realsense data to rabbit mq you can use the command below.
+```bash
+> Some startup command sequence
+```
+
+This takes the following arguments
+- -R [depth/color/pose]
+- -C config_file [optional]
+- Any additional OmegaConf overide methods. Read more about this her [Config](Config.md)
+
+## Published Data
+A description of the data structures produced by each realsense publisher is available here, [Publisher List](Publisher_List.md)
+
+## Adding More
+For additional functionality a wrapper class can be constructed around to the realsense class. An example of how to interface with a rs_pipeline child class is presented below below.
+
+```python
+from modules.realsense import depth_pipeline
+
+depth_obj = depth_pipeline()
+
+with depth_obj:
+    while True:
+        depth_frame = depth_obj.wait_for_frame()
+
+        if depth_frame is None:
+            continue
+
+        # Do something with depth data
+```
 
 # <a name="d435"></a>Realsense D435
 
