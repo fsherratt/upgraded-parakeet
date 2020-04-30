@@ -17,8 +17,8 @@ class TestRSPipeline(TestCase):
     @mock.patch('modules.realsense.rs_pipeline._exception_handle')
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
-    @mock.patch('modules.realsense.rs_pipeline.generate_config')
-    @mock.patch('modules.realsense.rs_pipeline.post_connect_process')
+    @mock.patch('modules.realsense.rs_pipeline._generate_config')
+    @mock.patch('modules.realsense.rs_pipeline._post_connect_process')
     def test_start_stop_connection(self, mock_post_connect, mock_cfg, mock_start, 
                                    mock_stop, mock_exception):
         import pyrealsense2 as rs
@@ -51,9 +51,9 @@ class TestRSPipeline(TestCase):
     Check get frame order of operation and exception handling
     """
     @mock.patch('modules.realsense.rs_pipeline._exception_handle')
-    @mock.patch('modules.realsense.rs_pipeline.post_process')
-    @mock.patch('modules.realsense.rs_pipeline.get_data')
-    @mock.patch('modules.realsense.rs_pipeline.get_frame')
+    @mock.patch('modules.realsense.rs_pipeline._post_process')
+    @mock.patch('modules.realsense.rs_pipeline._get_data')
+    @mock.patch('modules.realsense.rs_pipeline._get_frame')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
     def test_wait_for_frame(self, mock_wait, mock_get_frame,  
                             mock_get_data, mock_post, mock_exception):
@@ -108,7 +108,7 @@ class TestDepthPipeline(TestCase):
     @mock.patch('pyrealsense2.config.enable_stream')
     def test_stream_config(self, mock_config):
         import pyrealsense2 as rs
-        cfg = self.pipeline.generate_config()
+        cfg = self.pipeline._generate_config()
 
         self.assertEqual(mock_config.call_args[0][0], rs.stream.depth)
 
@@ -133,7 +133,7 @@ class TestDepthPipeline(TestCase):
         
 
         # Test full order of operations
-        rtn_value = self.pipeline.post_process(mock_data)
+        rtn_value = self.pipeline._post_process(mock_data)
 
         self.assertEqual(rtn_value[0], mock_time_return)
         self.assertEqual(rtn_value[1], mock_data)
@@ -199,14 +199,14 @@ class TestColorPipeline(TestCase):
     @mock.patch('pyrealsense2.config.enable_stream')
     def test_stream_config(self, mock_config):
         import pyrealsense2 as rs
-        cfg = self.pipeline.generate_config()
+        cfg = self.pipeline._generate_config()
 
         self.assertEqual(mock_config.call_args[0][0], rs.stream.color)
     
     @mock.patch('pyrealsense2.composite_frame.get_color_frame')
     def test_get_frame(self, mock_get_color):
         import pyrealsense2 as rs
-        self.pipeline.get_frame(rs.composite_frame)
+        self.pipeline._get_frame(rs.composite_frame)
         mock_get_color.assert_called()
 
 class TestPosPipeline(TestCase):
@@ -222,7 +222,7 @@ class TestPosPipeline(TestCase):
     @mock.patch('pyrealsense2.config.enable_stream')
     def test_stream_config(self, mock_config):
         import pyrealsense2 as rs
-        cfg = self.pipeline.generate_config()
+        cfg = self.pipeline._generate_config()
 
         self.assertEqual(mock_config.call_args[0][0], rs.stream.pose)
     
@@ -257,7 +257,7 @@ class TestPosPipeline(TestCase):
         mock_time.return_value = mock_time_return
 
         # Test full order of operations
-        rtn_value = self.pipeline.post_process(data)
+        rtn_value = self.pipeline._post_process(data)
 
         self.assertEqual(rtn_value[0], mock_time_return)
         self.assertListEqual(rtn_value[1], mock_tranlation_return)

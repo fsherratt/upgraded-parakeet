@@ -1,8 +1,8 @@
-import pyrealsense2 as rs
-import traceback
 import sys
 import time
+import traceback
 import numpy as np
+import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
 class rs_pipeline:
@@ -35,7 +35,7 @@ class rs_pipeline:
     """
     def open_connection(self):
         self._pipe = rs.pipeline()
-        cfg = self.generate_config()
+        cfg = self._generate_config()
         
         try:
             self._pipe.start(cfg)
@@ -43,7 +43,7 @@ class rs_pipeline:
             self._exception_handle("rs_pipeline:{}: failed to connect to camera".format(self._object_name))
             raise e
 
-        self.post_connect_process()
+        self._post_connect_process()
 
         print('rs_pipeline:{}: Connection Open'.format(self._object_name))
     
@@ -69,20 +69,50 @@ class rs_pipeline:
             self._exception_handle("rs_pipeline:{}:wait_for_frame: Timeout waiting for data frame".format(self._object_name))
             raise e
         
-        frame = self.get_frame(frames)
+        frame = self._get_frame(frames)
 
         try:
-            data = self.get_data(frame)
+            data = self._get_data(frame)
         except RuntimeError:
             self._exception_handle("rs_pipeline:{}:wait_for_frame: Frame contained no data".format(self._object_name))
             return None
 
         # Post Process
-        data = self.post_process(data)
+        data = self._post_process(data)
 
         # End
         return data
 
+    """
+    OVERLOADED FUNCTION: Generate the pipeline config
+    """
+    def _generate_config(self) -> rs.config:
+        raise NotImplementedError
+    
+    """
+    OVERLOADED FUNCTION: Process run after a succesful connection
+    """
+    def _post_connect_process(self):
+        return
+
+    """
+    OVERLOADED FUNCTION: Extract frame from rs.composite_frame
+    """
+    def _get_frame(self, frames):
+        raise NotImplementedError
+    
+    """
+    OVERLOADED FUNCTION: Extract data from frame
+    """
+    def _get_data(self, frame):
+        return frame.get_data()
+
+    """
+    OVERLOADED FUNCTION: Process run on extractred frame data
+    """
+    def _post_process(self, data):
+        return data
+    
     """
     Function to collate interal class exceptions
     TODO: Log error - requires rabbit MQ stuff
@@ -90,26 +120,7 @@ class rs_pipeline:
     def _exception_handle(self, err):
         print(err)
 
-    # Functions to Overload
-    def generate_config(self) -> rs.config:
-        raise NotImplementedError
-    
-    def post_connect_process(self):
-        return
-
-    def get_frame(self, frames):
-        raise NotImplementedError
-    
-    def get_data(self, frame):
-        return frame.get_data()
-
-    def post_process(self, data):
-        return data
-
 class depth_pipeline(rs_pipeline):
-    """
-    Declare all the constants, tunable variables are public
-    """
     def __init__(self):
         super().__init__()
 
@@ -125,7 +136,7 @@ class depth_pipeline(rs_pipeline):
         self._intrin = None
         self._scale = 1
 
-    def generate_config(self) -> rs.config:
+    def _generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.depth, 
                             self.depth_width, self.depth_height,
@@ -133,13 +144,13 @@ class depth_pipeline(rs_pipeline):
                             self.framerate )
         return cfg
 
-    def post_connect_process(self):
+    def _post_connect_process(self):
         self._get_intrinsics()
 
-    def get_frame(self, frames):
+    def _get_frame(self, frames):
         return frames.get_depth_frame()
 
-    def post_process(self, data):
+    def _post_process(self, data):
         timestamp = time.time()
         depth = np.asarray(data, dtype=np.uint16)
         intrin =  (self._scale, self._intrin.ppx, self._intrin.ppy, self._intrin.fx, self._intrin.fy)
@@ -170,9 +181,6 @@ class depth_pipeline(rs_pipeline):
         self._FOV = rs.rs2_fov(self._intrin)
 
 class color_pipeline(rs_pipeline):
-    """
-    Declare all the constants, tunable variables are public
-    """
     def __init__(self):
         super().__init__()
 
@@ -185,7 +193,7 @@ class color_pipeline(rs_pipeline):
         # private
         self._object_name = 'Color'
 
-    def generate_config(self) -> rs.config:
+    def _generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.color, 
                                 self.rgb_width, self.rgb_height, 
@@ -193,10 +201,10 @@ class color_pipeline(rs_pipeline):
                                 self.framerate)
         return cfg
 
-    def get_frame(self, frames:rs.composite_frame):
+    def _get_frame(self, frames:rs.composite_frame):
         return frames.get_color_frame()
 
-    def post_process(self, data):
+    def _post_process(self, data):
         timestamp = time.time()
         image = np.asarray(data, dtype=np.uint8)
 
@@ -218,18 +226,18 @@ class pose_pipeline(rs_pipeline):
         
         self._initialise_rotational_transforms()
 
-    def generate_config(self) -> rs.config:
+    def _generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.pose)
         return cfg
         
-    def get_frame(self, frames):
+    def _get_frame(self, frames):
         return frames.get_pose_frame()
 
-    def get_data(self, frame):
+    def _get_data(self, frame):
         return frame.get_pose_data()
 
-    def post_process(self, data):
+    def _post_process(self, data):
         timestamp = time.time()
 
         pos = [data.translation.x, 
