@@ -1,11 +1,11 @@
 from context import modules
 from unittest import TestCase, mock
 
-from modules.realsense import rs_pipeline, depth_pipeline, color_pipeline, pose_pipeline
+from modules.realsense import RealsensePipeline, DepthPipeline, ColorPipeline, PosePipeline
 
 class TestRSPipeline(TestCase):
     def setUp(self):
-        self.pipeline = rs_pipeline()
+        self.pipeline = RealsensePipeline()
     
     def tearDown(self):
         pass
@@ -14,11 +14,11 @@ class TestRSPipeline(TestCase):
     Can mocked pipe connection be made and close succesfully
     Test elegant exception handling during each event
     """
-    @mock.patch('modules.realsense.rs_pipeline._exception_handle')
+    @mock.patch('modules.realsense.RealsensePipeline._exception_handle')
     @mock.patch('pyrealsense2.pipeline.stop')
     @mock.patch('pyrealsense2.pipeline.start')
-    @mock.patch('modules.realsense.rs_pipeline._generate_config')
-    @mock.patch('modules.realsense.rs_pipeline._post_connect_process')
+    @mock.patch('modules.realsense.RealsensePipeline._generate_config')
+    @mock.patch('modules.realsense.RealsensePipeline._post_connect_process')
     def test_start_stop_connection(self, mock_post_connect, mock_cfg, mock_start, 
                                    mock_stop, mock_exception):
         import pyrealsense2 as rs
@@ -50,10 +50,10 @@ class TestRSPipeline(TestCase):
     """
     Check get frame order of operation and exception handling
     """
-    @mock.patch('modules.realsense.rs_pipeline._exception_handle')
-    @mock.patch('modules.realsense.rs_pipeline._post_process')
-    @mock.patch('modules.realsense.rs_pipeline._get_data')
-    @mock.patch('modules.realsense.rs_pipeline._get_frame')
+    @mock.patch('modules.realsense.RealsensePipeline._exception_handle')
+    @mock.patch('modules.realsense.RealsensePipeline._post_process')
+    @mock.patch('modules.realsense.RealsensePipeline._get_data')
+    @mock.patch('modules.realsense.RealsensePipeline._get_frame')
     @mock.patch('pyrealsense2.pipeline.wait_for_frames')
     def test_wait_for_frame(self, mock_wait, mock_get_frame,  
                             mock_get_data, mock_post, mock_exception):
@@ -97,7 +97,7 @@ class TestRSPipeline(TestCase):
     
 class TestDepthPipeline(TestCase):
     def setUp(self):
-        self.pipeline = depth_pipeline()
+        self.pipeline = DepthPipeline()
     
     def tearDown(self):
         pass
@@ -143,10 +143,10 @@ class TestDepthPipeline(TestCase):
     Test FOV getter function
     """
     def test_fov_return(self):
-        self.pipeline._FOV = 9
+        self.pipeline._fov = 9
         rtn = self.pipeline.get_fov()
 
-        self.assertEqual(self.pipeline._FOV, rtn)
+        self.assertEqual(self.pipeline._fov, rtn)
 
     """
     Test get intrinsics order of operations
@@ -184,11 +184,11 @@ class TestDepthPipeline(TestCase):
 
         self.assertEqual(self.pipeline._intrin, rs.intrinsics)
         self.assertEqual(self.pipeline._scale, mock_scale_value)
-        self.assertEqual(self.pipeline._FOV, mocK_fov_value)
+        self.assertEqual(self.pipeline._fov, mocK_fov_value)
 
 class TestColorPipeline(TestCase):
     def setUp(self):
-        self.pipeline = color_pipeline()
+        self.pipeline = ColorPipeline()
     
     def tearDown(self):
         pass
@@ -211,7 +211,7 @@ class TestColorPipeline(TestCase):
 
 class TestPosPipeline(TestCase):
     def setUp(self):
-        self.pipeline = pose_pipeline()
+        self.pipeline = PosePipeline()
     
     def tearDown(self):
         pass
@@ -230,8 +230,8 @@ class TestPosPipeline(TestCase):
     Check get frame order of operation and exception handling
     """
     @mock.patch('time.time')
-    @mock.patch('modules.realsense.pose_pipeline._convert_rotational_frame')
-    @mock.patch('modules.realsense.pose_pipeline._convert_positional_frame')
+    @mock.patch('modules.realsense.PosePipeline._convert_rotational_frame')
+    @mock.patch('modules.realsense.PosePipeline._convert_positional_frame')
     def test_post_process(self, mock_pos_transform, mock_rot_transform, mock_time):
         import pyrealsense2 as rs
 
@@ -308,7 +308,7 @@ class TestPosPipeline(TestCase):
     """
     def run_transform_tests(self, t265_eul, t265_pos, north_offset, cam_tilt, ):
         from scipy.spatial.transform import Rotation as R
-        self.pipeline.North_offset = north_offset
+        self.pipeline.north_offset = north_offset
         self.pipeline.tilt_deg = cam_tilt
 
         self.pipeline._initialise_rotational_transforms()
