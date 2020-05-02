@@ -2,7 +2,6 @@ import threading
 import queue
 import sys
 import time
-import traceback
 
 import logging
 
@@ -12,6 +11,7 @@ class LoggingInterface:
         self._log_queue_event = threading.Event()
 
         self._loop_running = True
+        self._log_thread = None
 
     def __enter__(self):
         self.start_logging_loop()
@@ -43,7 +43,7 @@ class LoggingInterface:
                 continue
 
             self.save_to_file(msg)
-    
+
     def _clear_message_event(self):
         self._log_queue_event.clear()
 
@@ -86,16 +86,16 @@ class FileLogger(LoggingInterface):
         log_directory = 'logs/'
         log_filename = log_directory+ log_name + '_' + time.strftime("%Y%m%d-%H%M%S") + '.log'
 
-        fh = logging.FileHandler(log_filename)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
+        file_handle = logging.FileHandler(log_filename)
+        file_handle.setLevel(logging.DEBUG)
+        file_handle.setFormatter(formatter)
+        self.logger.addHandler(file_handle)
 
         if print_to_console:
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.DEBUG)
-            ch.setFormatter(formatter)  
-            self.logger.addHandler(ch)
+            console_handle = logging.StreamHandler()
+            console_handle.setLevel(logging.DEBUG)
+            console_handle.setFormatter(formatter)
+            self.logger.addHandler(console_handle)
 
     def save_to_file(self, msg):
         self.logger.debug(msg[1])
