@@ -4,6 +4,7 @@ be added to the occupancy map
 """
 import numpy as np
 from .async_message import AsyncMessageCallback
+from scipy.spatial.transform import Rotation as R
 
 class MapPreprocess:
     """
@@ -11,14 +12,32 @@ class MapPreprocess:
     be added to the global occupancy map
     """
     def __init__(self):
-        pass
+        self.xRange = [-10, 10]
+        self.yRange = [-10, 10]
+        self.zRange = [-2, 5]
+
+        self.xDivisions = 50
+        self.yDivisions = 50
+        self.zDivisions = 10
+
+        self.xBins = np.linspace(self.xRange[0], self.xRange[1], self.xDivisions)
+        self.yBins = np.linspace(self.yRange[0], self.yRange[1], self.yDivisions)
+        self.zBins = np.linspace(self.zRange[0], self.zRange[1], self.zDivisions)
+        # Map grid delimitations
 
     def process_local_point_cloud(self, point_cloud, pose):
         """
         Process batches of local point clouds
         """
+        point_cloud = self._local_to_global(point_cloud, pose)
 
-    def publish_data_set(self):
+        map_points, point_count = self._discretise_point_cloud(point_cloud)
+
+        map_points, point_count = self._batch_filter(map_points, point_count)
+
+        self.publish_data_set(map_points, point_count)
+
+    def publish_data_set(self, points, count):
         """
         Passes data to Rabbit MQ
         """
@@ -27,22 +46,39 @@ class MapPreprocess:
         """
         Convert local points to a global coordinate system
         """
+        rot = R.from_quat(pose[2])
 
-    def _discretise_point_cloud(self):
+        global_points = rot.apply(local_points)
+        global_points = np.add(global_points, pose[1])
+
+        return global_points
+
+    def _discretise_point_cloud(self, points):
         """
         Take continous point cloud and discritise to map grid
         """
+        xSort = np.digitize(points[:, 0], self.xBins) -1
+        ySort = np.digitize(points[:, 1], self.yBins) -1
+        zSort = np.digitize(points[:, 2], self.zBins) -1
 
-    def _compress_point_cloud(self):
+        points = np.column_stack((xSort, ySort, zSort))
+
+        points, count = self._compress_point_cloud(points)
+        return points, count
+
+    def _compress_point_cloud(self, points):
         """
         Take a discritised point cloud and compress to cummalative
         counts of unique points
         """
+        points, count = np.unique(points, axis=0, return_counts=True)
+        return (points, count)
 
-    def _batch_filter(self, point_cloud):
+    def _batch_filter(self, points, count):
         """
         Final filtering stage before adding to the map
         """
+        return points, count
 
 class DepthMapAdapter(MapPreprocess):
     """
@@ -87,7 +123,7 @@ class DepthMapAdapter(MapPreprocess):
         depth_frame = self._pre_process(depth_data[1], depth_data[2])
         coord = self._deproject_frame(depth_frame, depth_data[2])
 
-        self.process_local_point_cloud(coord, pose_data[1])
+        self.process_local_point_cloud(coord, pose_data)
 
     def _pre_process(self, depth_frame, intrin):
         """
