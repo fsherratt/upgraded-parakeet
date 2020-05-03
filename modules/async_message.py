@@ -14,7 +14,6 @@ class AsyncMessageCallback:
 
         self._message_queue = queue.Queue(maxsize=queue_size)
         self._new_message_event = threading.Event()
-        self._message_queue.maxsize
 
     def wait_for_message(self):
         """
@@ -22,7 +21,7 @@ class AsyncMessageCallback:
         """
         self._new_message_event.wait(timeout=self._wait_timeout)
         msg = None
-        
+
         try:
             msg = self._message_queue.get_nowait()
         except queue.Empty:
