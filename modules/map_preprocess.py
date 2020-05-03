@@ -85,7 +85,7 @@ class DepthMapAdapter(MapPreprocess):
         depth_data, pose_data = msg[1]
 
         depth_frame = self._pre_process(depth_data[1], depth_data[2])
-        coord = self._deproject(depth_frame, depth_data[2])
+        coord = self._deproject_frame(depth_frame, depth_data[2])
 
         self.process_local_point_cloud(coord, pose_data[1])
 
@@ -93,17 +93,17 @@ class DepthMapAdapter(MapPreprocess):
         """
         Any pre-processing before deprojection
         """
-        depth_frame = self._scale_depth(depth_frame, intrin)
-        depth_frame = self._range_limit(depth_frame)
+        depth_frame = self._scale_depth_frame(depth_frame, intrin[0])
+        depth_frame = self._limit_depth_range(depth_frame)
         return depth_frame
 
-    def _scale_depth(self, depth_frame, intrin):
+    def _scale_depth_frame(self, depth_frame, scale):
         """
         Convert depth pixels into meter units
         """
-        return depth_frame * intrin[0]
+        return depth_frame * scale
 
-    def _range_limit(self, depth_frame):
+    def _limit_depth_range(self, depth_frame):
         """
         Limit the maximum/minimum range of the depth camera
         """
@@ -111,12 +111,12 @@ class DepthMapAdapter(MapPreprocess):
                                   depth_frame > self.depth_max_range)] = np.nan
         return depth_frame
 
-    def _deproject(self, depth_frame, intrin):
+    def _deproject_frame(self, depth_frame, intrin):
         """
         Deproject depth image to local cartesian coordinate system
         """
         frame_shape = depth_frame.shape
-        x_deproject, y_deproject = self._init_deprojection_matrix(frame_shape, intrin)
+        x_deproject, y_deproject = self._initialise_deprojection_matrix(frame_shape, intrin)
 
         z_coord = depth_frame
         x_coord = np.multiply(depth_frame, x_deproject)
@@ -129,7 +129,7 @@ class DepthMapAdapter(MapPreprocess):
         coord = np.column_stack((z_coord, x_coord, y_coord)) # Output as FRD coordinates
         return coord[~np.isnan(z_coord), :]
 
-    def _init_deprojection_matrix(self, matrix_shape, intrin):
+    def _initialise_deprojection_matrix(self, matrix_shape, intrin):
         """
         Initialise conversion matrix for converting the depth frame to a de-projected 3D
         coordinate system
