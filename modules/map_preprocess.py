@@ -2,6 +2,7 @@
 This module contains all classes related to preprocessing of point data to
 be added to the occupancy map
 """
+import time
 import numpy as np
 from .async_message import AsyncMessageCallback
 from scipy.spatial.transform import Rotation as R
@@ -20,10 +21,18 @@ class MapPreprocess:
         self.yDivisions = 50
         self.zDivisions = 10
 
+        self.xBins = None
+        self.yBins = None
+        self.zBins = None
+
+        self._initialise_bin_dilimitators()
+    
+        self.last_time = time.time()
+
+    def _initialise_bin_dilimitators(self):
         self.xBins = np.linspace(self.xRange[0], self.xRange[1], self.xDivisions)
         self.yBins = np.linspace(self.yRange[0], self.yRange[1], self.yDivisions)
         self.zBins = np.linspace(self.zRange[0], self.zRange[1], self.zDivisions)
-        # Map grid delimitations
 
     def process_local_point_cloud(self, point_cloud, pose):
         """
@@ -41,6 +50,10 @@ class MapPreprocess:
         """
         Passes data to Rabbit MQ
         """
+        new_time = time.time()
+        tdif = new_time - self.last_time
+        self.last_time = new_time
+        print("Time:{:.2f}\tNumer of voxels: {}".format(tdif, points.shape[0]))
 
     def _local_to_global(self, local_points, pose):
         """
@@ -62,7 +75,7 @@ class MapPreprocess:
         zSort = np.digitize(points[:, 2], self.zBins) -1
 
         points = np.column_stack((xSort, ySort, zSort))
-
+        points = np.uint16(points)
         points, count = self._compress_point_cloud(points)
         return points, count
 
@@ -72,6 +85,11 @@ class MapPreprocess:
         counts of unique points
         """
         points, count = np.unique(points, axis=0, return_counts=True)
+
+        # Compress data
+        points = np.uint16(points)
+        count = np.uint16(count)
+
         return (points, count)
 
     def _batch_filter(self, points, count):
