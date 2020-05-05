@@ -3,6 +3,8 @@ import numpy as np
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
+from modules import data_types
+
 class RealsensePipeline:
 
     def __init__(self):
@@ -136,8 +138,10 @@ class DepthPipeline(RealsensePipeline):
         self._object_name = 'Depth'
 
         self._intrin = None
-        self._scale = 1
         self._fov = (0, 0)
+
+    def wait_for_frame(self) -> data_types.Depth:
+        return super().wait_for_frame()
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
@@ -155,14 +159,8 @@ class DepthPipeline(RealsensePipeline):
         return frames.get_depth_frame()
 
     def _post_process(self, data):
-        timestamp = time.time()
         depth = np.asarray(data, dtype=np.uint16)
-        intrin = (self._scale,
-                  self._intrin.ppx, self._intrin.ppy,
-                  self._intrin.fx, self._intrin.fy)
-        data = (timestamp, depth, intrin)
-
-        return data
+        return data_types.Depth(time.time(), depth, self._intrin)
 
     def get_fov(self) -> tuple:
         """
@@ -176,15 +174,17 @@ class DepthPipeline(RealsensePipeline):
         """
         profile = self._pipe.get_active_profile()
 
-        self._intrin = profile.get_stream(rs.stream.depth) \
+        intrin = profile.get_stream(rs.stream.depth) \
                         .as_video_stream_profile() \
                         .get_intrinsics()
 
-        self._scale = profile.get_device() \
+        scale = profile.get_device() \
                         .first_depth_sensor() \
                         .get_depth_scale()
 
-        self._fov = rs.rs2_fov(self._intrin)
+        self._intrin = data_types.Intrinsics(scale, intrin.ppx, intrin.ppy, intrin.fx, intrin.fy)
+
+        self._fov = rs.rs2_fov(intrin)
 
 class ColorPipeline(RealsensePipeline):
     def __init__(self):
@@ -199,6 +199,9 @@ class ColorPipeline(RealsensePipeline):
         # private
         self._object_name = 'Color'
 
+    def wait_for_frame(self) -> data_types.Color:
+        return super().wait_for_frame()
+
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.color,
@@ -212,10 +215,9 @@ class ColorPipeline(RealsensePipeline):
         return frames.get_color_frame()
 
     def _post_process(self, data):
-        timestamp = time.time()
         image = np.asarray(data, dtype=np.uint8)
 
-        return (timestamp, image)
+        return data_types.Color(time.time(), image)
 
 class PosePipeline(RealsensePipeline):
     def __init__(self):
@@ -233,6 +235,9 @@ class PosePipeline(RealsensePipeline):
 
         self._initialise_rotational_transforms()
 
+    def wait_for_frame(self) -> data_types.Pose:
+        return super().wait_for_frame()
+
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
         cfg.enable_stream(rs.stream.pose)
@@ -245,8 +250,6 @@ class PosePipeline(RealsensePipeline):
         return frame.get_pose_data()
 
     def _post_process(self, data):
-        timestamp = time.time()
-
         pos = [data.translation.x,
                data.translation.y,
                data.translation.z]
@@ -256,12 +259,10 @@ class PosePipeline(RealsensePipeline):
                 data.rotation.z,
                 data.rotation.w]
 
-        conf = data.tracker_confidence
-
         quat = self._convert_rotational_frame(quat)
         pos = self._convert_positional_frame(pos)
 
-        return (timestamp, pos, quat, conf)
+        return data_types.Pose(time.time(), pos, quat, data.tracker_confidence)
 
     def _initialise_rotational_transforms(self):
         """
@@ -304,7 +305,7 @@ if __name__ == "__main__": #pragma: no cover
                 if depth_frame is None:
                     continue
 
-                depth_frame = depth_frame[1] * depth_frame[2][0]
+                depth_frame = depth_frame.depth * depth_frame.intrin.scale
                 depth_frame = cv2.applyColorMap(cv2.convertScaleAbs(depth_frame, alpha=50),
                                                 cv2.COLORMAP_JET)
                 cv2.imshow('depth_frame', depth_frame)
@@ -322,7 +323,7 @@ if __name__ == "__main__": #pragma: no cover
                 if color_frame is None:
                     continue
 
-                cv2.imshow('color_frame', color_frame[1])
+                cv2.imshow('color_frame', color_frame.image)
                 cv2.waitKey(1)
 
     def pose_loop():
@@ -335,7 +336,7 @@ if __name__ == "__main__": #pragma: no cover
                 if pose_frame is None:
                     continue
 
-                print(pose_frame[1])
+                print(pose_frame.translation)
                 time.sleep(0.1)
 
     def stop_running(sig, frame):
