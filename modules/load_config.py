@@ -1,6 +1,6 @@
 from omegaconf import OmegaConf
 
-def load_config(config_file=None, use_cli_input=True):
+def from_file(config_file=None, use_cli_input=True):
     if config_file is None and not use_cli_input:
         raise AttributeError('No input specified')
 

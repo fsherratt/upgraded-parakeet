@@ -301,8 +301,8 @@ class TestPosPipeline(TestCase):
         """
         Helper function for `test_convert_coordinate_frame` test
         """
-        self.pipeline.north_offset = north_offset
-        self.pipeline.tilt_deg = cam_tilt
+        self.pipeline.set_north_offset(north_offset)
+        self.pipeline.set_tilt_offset(cam_tilt)
 
         self.pipeline._initialise_rotational_transforms()
 
