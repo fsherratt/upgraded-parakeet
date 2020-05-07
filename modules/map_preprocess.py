@@ -3,9 +3,12 @@ This module contains all classes related to preprocessing of point data to
 be added to the occupancy map
 """
 import time
+
 import numpy as np
-from .async_message import AsyncMessageCallback
 from scipy.spatial.transform import Rotation as R
+
+from .async_message import AsyncMessageCallback
+
 
 class MapPreprocess:
     """
@@ -13,26 +16,26 @@ class MapPreprocess:
     be added to the global occupancy map
     """
     def __init__(self):
-        self.xRange = [-10, 10]
-        self.yRange = [-10, 10]
-        self.zRange = [-2, 5]
+        self.x_range = [-10, 10]
+        self.y_range = [-10, 10]
+        self.z_range = [-2, 5]
 
-        self.xDivisions = 50
-        self.yDivisions = 50
-        self.zDivisions = 10
+        self.x_divisions = 50
+        self.y_divisions = 50
+        self.z_divisions = 10
 
-        self.xBins = None
-        self.yBins = None
-        self.zBins = None
+        self.x_bins = None
+        self.y_bins = None
+        self.z_bins = None
 
         self._initialise_bin_dilimitators()
-    
+
         self.last_time = time.time()
 
     def _initialise_bin_dilimitators(self):
-        self.xBins = np.linspace(self.xRange[0], self.xRange[1], self.xDivisions)
-        self.yBins = np.linspace(self.yRange[0], self.yRange[1], self.yDivisions)
-        self.zBins = np.linspace(self.zRange[0], self.zRange[1], self.zDivisions)
+        self.x_bins = np.linspace(self.x_range[0], self.x_range[1], self.x_divisions)
+        self.y_bins = np.linspace(self.y_range[0], self.y_range[1], self.y_divisions)
+        self.z_bins = np.linspace(self.z_range[0], self.z_range[1], self.z_divisions)
 
     def process_local_point_cloud(self, point_cloud, pose):
         """
@@ -59,10 +62,10 @@ class MapPreprocess:
         """
         Convert local points to a global coordinate system
         """
-        rot = R.from_quat(pose[2])
+        rot = R.from_quat(pose.quaternion)
 
         global_points = rot.apply(local_points)
-        global_points = np.add(global_points, pose[1])
+        global_points = np.add(global_points, pose.translation)
 
         return global_points
 
@@ -70,11 +73,11 @@ class MapPreprocess:
         """
         Take continous point cloud and discritise to map grid
         """
-        xSort = np.digitize(points[:, 0], self.xBins) -1
-        ySort = np.digitize(points[:, 1], self.yBins) -1
-        zSort = np.digitize(points[:, 2], self.zBins) -1
+        x_sort = np.digitize(points[:, 0], self.x_bins) -1
+        y_sort = np.digitize(points[:, 1], self.y_bins) -1
+        z_sort = np.digitize(points[:, 2], self.z_bins) -1
 
-        points = np.column_stack((xSort, ySort, zSort))
+        points = np.column_stack((x_sort, y_sort, z_sort))
         points = np.uint16(points)
         points, count = self._compress_point_cloud(points)
         return points, count
@@ -138,8 +141,8 @@ class DepthMapAdapter(MapPreprocess):
 
         depth_data, pose_data = msg[1]
 
-        depth_frame = self._pre_process(depth_data[1], depth_data[2])
-        coord = self._deproject_frame(depth_frame, depth_data[2])
+        depth_frame = self._pre_process(depth_data.data, depth_data.intrin)
+        coord = self._deproject_frame(depth_frame, depth_data.intrin)
 
         self.process_local_point_cloud(coord, pose_data)
 
@@ -147,7 +150,7 @@ class DepthMapAdapter(MapPreprocess):
         """
         Any pre-processing before deprojection
         """
-        depth_frame = self._scale_depth_frame(depth_frame, intrin[0])
+        depth_frame = self._scale_depth_frame(depth_frame, intrin.scale)
         depth_frame = self._limit_depth_range(depth_frame)
         return depth_frame
 
@@ -190,8 +193,8 @@ class DepthMapAdapter(MapPreprocess):
         """
         matrix_height, matrix_width = matrix_shape
 
-        x_deproject_row = (np.arange(matrix_width) - intrin[1]) / intrin[3]
-        y_deproject_col = (np.arange(matrix_height) - intrin[2]) / intrin[4]
+        x_deproject_row = (np.arange(matrix_width) - intrin.ppx) / intrin.fx
+        y_deproject_col = (np.arange(matrix_height) - intrin.ppy) / intrin.fy
 
         x_deproject_matrix = np.tile(x_deproject_row, (matrix_height, 1))
         y_deproject_matrix = np.tile(y_deproject_col, (matrix_width, 1)).transpose()
