@@ -40,9 +40,9 @@ class TestMapPreprocess(TestCase):
 
     @mock.patch('modules.map_preprocess.MapPreprocess._compress_point_cloud')
     def test_discritise_point_cloud(self, mock_compress):
-        test_coord = np.asarray([self.map_pre.x_range[0],
-                                 self.map_pre.y_range[0],
-                                 self.map_pre.z_range[0]])
+        test_coord = np.asarray([self.map_pre.conf.map.x_min,
+                                 self.map_pre.conf.map.y_min,
+                                 self.map_pre.conf.map.z_min])
 
         test_coord = np.reshape(test_coord, (1, -1))
         mock_compress.side_effect = lambda x: (x, 1)

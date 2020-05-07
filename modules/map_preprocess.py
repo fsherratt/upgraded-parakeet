@@ -7,22 +7,16 @@ import time
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from .async_message import AsyncMessageCallback
-
+from modules.async_message import AsyncMessageCallback
+from modules import load_config
 
 class MapPreprocess:
     """
     This class takes a localised point cloud and prepares it to
     be added to the global occupancy map
     """
-    def __init__(self):
-        self.x_range = [-10, 10]
-        self.y_range = [-10, 10]
-        self.z_range = [-2, 5]
-
-        self.x_divisions = 50
-        self.y_divisions = 50
-        self.z_divisions = 10
+    def __init__(self, config_file='conf/map.yaml'):
+        self.conf = load_config.from_file(config_file)
 
         self.x_bins = None
         self.y_bins = None
@@ -33,9 +27,15 @@ class MapPreprocess:
         self.last_time = time.time()
 
     def _initialise_bin_dilimitators(self):
-        self.x_bins = np.linspace(self.x_range[0], self.x_range[1], self.x_divisions)
-        self.y_bins = np.linspace(self.y_range[0], self.y_range[1], self.y_divisions)
-        self.z_bins = np.linspace(self.z_range[0], self.z_range[1], self.z_divisions)
+        self.x_bins = np.linspace(self.conf.map.x_min,
+                                  self.conf.map.x_max,
+                                  self.conf.map.x_divisions)
+        self.y_bins = np.linspace(self.conf.map.y_min,
+                                  self.conf.map.y_max,
+                                  self.conf.map.y_divisions)
+        self.z_bins = np.linspace(self.conf.map.z_min,
+                                  self.conf.map.z_max,
+                                  self.conf.map.z_divisions)
 
     def process_local_point_cloud(self, point_cloud, pose):
         """
@@ -105,8 +105,8 @@ class DepthMapAdapter(MapPreprocess):
     """
     Prepare D435 depth data for feeding into the occupancy map
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config_file='conf/map.yaml'):
+        super().__init__(config_file)
 
         self.depth_min_range = 0.1
         self.depth_max_range = 10
@@ -141,7 +141,7 @@ class DepthMapAdapter(MapPreprocess):
 
         depth_data, pose_data = msg[1]
 
-        depth_frame = self._pre_process(depth_data.data, depth_data.intrin)
+        depth_frame = self._pre_process(depth_data.depth, depth_data.intrin)
         coord = self._deproject_frame(depth_frame, depth_data.intrin)
 
         self.process_local_point_cloud(coord, pose_data)

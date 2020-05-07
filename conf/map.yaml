@@ -1,0 +1,11 @@
+map:
+  x_min: -10
+  x_max: 10
+  y_min: -10
+  y_max: 10
+  z_min: -2
+  z_max: 5
+
+  x_divisions: 50
+  y_divisions: 50
+  z_divisions: 10
