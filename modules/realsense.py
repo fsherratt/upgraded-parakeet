@@ -26,23 +26,23 @@ class RealsensePipeline:
 
     def __enter__(self):
         """
-        with enter method opens D435 connection
+        with enter method opens realsense connection
         """
         self.open_connection()
 
     def __exit__(self, exception_type, exception_value, traceback):
         """
-        with exit method closes the D435 connection
+        with exit method closes the realsense connection
         """
         if traceback:
             print(traceback.tb_frame)
-            self._exception_handle("rs_d435: __exit__: `{}`".format(exception_value))
+            self._exception_handle("rs_pipeline: __exit__: `{}`".format(exception_value))
 
         self.close_connection()
 
     def open_connection(self):
         """
-        Open Connection to D435 camera
+        Open Connection to realsense camera
         """
         self._pipe = rs.pipeline()
         cfg = self._generate_config()
@@ -60,7 +60,7 @@ class RealsensePipeline:
 
     def close_connection(self):
         """
-        Close connection to D435 camera
+        Close connection to Realsense camera
         """
         if self._pipe is None:
             return
