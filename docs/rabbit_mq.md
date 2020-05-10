@@ -8,6 +8,8 @@ To install from the package cloud:
 
 * First import PackageCloud signing key
 	* wget -O - "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey" | sudo apt-key add -
+* Install dependancies
+	* sudo apt-get install erlang apt-transport-https -y
 * Then run the install script
 	* curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
 * Then install rabbit mq server
@@ -35,7 +37,7 @@ channel.exchange_declare( exchange='exhange_name_here', exchange_type='direct' )
 Re-declaring an exchange doesn't matter. You MUST make sure it is declared before using it.
 
 #### Publish
-To publish to a queue, you must just declare the  the exchange and routing key to be published in the publish function. This is done by:
+To publish to a queue, you declare the exchange and routing key to be published to in the publish function. This is done by:
 ```python3
 channel.basic_publish(
                 exchange='exchange_name_here',
