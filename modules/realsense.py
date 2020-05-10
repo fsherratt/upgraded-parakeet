@@ -298,6 +298,6 @@ class PosePipeline(RealsensePipeline):
 
     def _convert_positional_frame(self, pos) -> list:
         """
-        Convert T264 translation frame to aero NED translation
+        Convert T265 translation frame to aero NED translation
         """
         return self.h_aeroref_t265ref.apply(pos)
