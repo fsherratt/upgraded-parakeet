@@ -3,6 +3,7 @@ Unit testing allows automated testing of code units to validating that each unit
 
 ## Useful links
 - [Getting Started With Testing in Python](https://realpython.com/python-testing/)
+- [Basic patterns and examples](https://docs.pytest.org/en/latest/example/simple.html)
 - [An Introduction to Mocking in Python](https://www.toptal.com/python/an-introduction-to-mocking-in-python)
 - [Unittest Documentation](https://docs.python.org/3/library/unittest.html)
 - [Mock Documentation](https://docs.python.org/3/library/unittest.mock.html)
@@ -23,12 +24,12 @@ Within this project all unit tests are help within the tests folder. Each module
 A unit test template is shown below n.b. test names should be as verbose as possible. 
 
 ```python
-import unittest
+from unittest import TestCase
 from context import modules
 
 from modules import module_1.py
 
-class test_module_1(unittest.TestCase):
+class test_module_1(TestCase):
     def setUp(self):
         pass
     
