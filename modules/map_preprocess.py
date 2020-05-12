@@ -6,9 +6,10 @@ import time
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import cv2
 
 from modules.async_message import AsyncMessageCallback
-from modules import load_config
+from modules import load_config, data_types
 
 class MapPreprocess:
     """
@@ -56,7 +57,7 @@ class MapPreprocess:
         new_time = time.time()
         tdif = new_time - self.last_time
         self.last_time = new_time
-        print("Time:{:.2f}\tNumer of voxels: {}".format(tdif, points.shape[0]))
+        print("Time:{:.4f}\tNumer of voxels: {}".format(tdif, points.shape[0]))
 
     def _local_to_global(self, local_points, pose):
         """
@@ -79,7 +80,10 @@ class MapPreprocess:
 
         points = np.column_stack((x_sort, y_sort, z_sort))
         points = np.uint16(points)
+
+        count = None
         points, count = self._compress_point_cloud(points)
+
         return points, count
 
     def _compress_point_cloud(self, points):
@@ -115,7 +119,7 @@ class DepthMapAdapter(MapPreprocess):
 
         self._pose_data = None
 
-    def depth_callback(self, data):
+    def depth_callback(self, data: data_types.Depth):
         """
         Recieve incoming depth data
         """
@@ -124,7 +128,7 @@ class DepthMapAdapter(MapPreprocess):
 
         self.depth_message_queue.queue_message((data, self._pose_data))
 
-    def pose_callback(self, data):
+    def pose_callback(self, data: data_types.Pose):
         """
         Recieve incoming pose data
         """
@@ -146,13 +150,40 @@ class DepthMapAdapter(MapPreprocess):
 
         self.process_local_point_cloud(coord, pose_data)
 
-    def _pre_process(self, depth_frame, intrin):
+    def _pre_process(self, depth_frame, intrin: data_types.Intrinsics):
         """
         Any pre-processing before deprojection
         """
+        depth_frame, intrin = self._downscale_data(depth_frame, intrin)
         depth_frame = self._scale_depth_frame(depth_frame, intrin.scale)
         depth_frame = self._limit_depth_range(depth_frame)
+
         return depth_frame
+
+    def _downscale_data(self, data_frame, intrin: data_types.Intrinsics):
+
+        block_size = tuple(self.conf.depth_preprocess.downscale_block_size)
+        shape = data_frame.shape
+
+        new_shape = (shape[0]//block_size[0], block_size[0], shape[1]//block_size[1], block_size[1])
+        new_data_frame = np.reshape(data_frame, new_shape)
+
+        if self.conf.depth_preprocess.downscale_method == 'min_pool':
+            new_data_frame = np.amin(new_data_frame, axis=(1, 3))
+
+        elif self.conf.depth_preprocess.downscale_method == 'max_pool':
+            new_data_frame = np.amax(new_data_frame, axis=(1, 3))
+            
+        else:
+            new_data_frame = np.mean(new_data_frame, axis=(1, 3))
+
+        new_intrin = data_types.Intrinsics(intrin.scale,
+                                           intrin.ppx / block_size[1],
+                                           intrin.ppy / block_size[0],
+                                           intrin.fx,
+                                           intrin.fy)
+
+        return new_data_frame, new_intrin
 
     def _scale_depth_frame(self, depth_frame, scale):
         """
@@ -164,11 +195,11 @@ class DepthMapAdapter(MapPreprocess):
         """
         Limit the maximum/minimum range of the depth camera
         """
-        depth_frame[np.logical_or(depth_frame < self.depth_min_range,
-                                  depth_frame > self.depth_max_range)] = np.nan
+        depth_frame[np.logical_or(depth_frame < self.conf.depth_preprocess.min_range,
+                                  depth_frame > self.conf.depth_preprocess.max_range)] = np.nan
         return depth_frame
 
-    def _deproject_frame(self, depth_frame, intrin):
+    def _deproject_frame(self, depth_frame, intrin: data_types.Intrinsics):
         """
         Deproject depth image to local cartesian coordinate system
         """
@@ -186,7 +217,7 @@ class DepthMapAdapter(MapPreprocess):
         coord = np.column_stack((z_coord, x_coord, y_coord)) # Output as FRD coordinates
         return coord[~np.isnan(z_coord), :]
 
-    def _initialise_deprojection_matrix(self, matrix_shape, intrin):
+    def _initialise_deprojection_matrix(self, matrix_shape, intrin: data_types.Intrinsics):
         """
         Initialise conversion matrix for converting the depth frame to a de-projected 3D
         coordinate system

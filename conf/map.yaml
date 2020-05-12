@@ -1,3 +1,4 @@
+---
 map:
   x_min: -10
   x_max: 10
@@ -9,3 +10,12 @@ map:
   x_divisions: 50
   y_divisions: 50
   z_divisions: 10
+
+depth_preprocess:
+  max_range: 10
+  min_range: 0.1
+
+  downscale_block_size: [4, 4]
+  # mean, max_pool, min_pool
+  downscale_method: mean
+...
