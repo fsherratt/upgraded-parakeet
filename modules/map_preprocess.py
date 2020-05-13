@@ -27,15 +27,15 @@ class MapPreprocess:
         self.last_time = time.time()
 
     def _initialise_bin_dilimitators(self):
-        self.x_bins = np.linspace(self.conf.map.x_min,
-                                  self.conf.map.x_max,
-                                  self.conf.map.x_divisions)
-        self.y_bins = np.linspace(self.conf.map.y_min,
-                                  self.conf.map.y_max,
-                                  self.conf.map.y_divisions)
-        self.z_bins = np.linspace(self.conf.map.z_min,
-                                  self.conf.map.z_max,
-                                  self.conf.map.z_divisions)
+        self.x_bins = np.linspace(self.conf.map.size.x_min,
+                                  self.conf.map.size.x_max,
+                                  self.conf.map.resolution.x_divisions)
+        self.y_bins = np.linspace(self.conf.map.size.y_min,
+                                  self.conf.map.size.y_max,
+                                  self.conf.map.resolution.y_divisions)
+        self.z_bins = np.linspace(self.conf.map.size.z_min,
+                                  self.conf.map.size.z_max,
+                                  self.conf.map.resolution.z_divisions)
 
     def process_local_point_cloud(self, data_set):
         """
@@ -172,7 +172,7 @@ class DepthMapAdapter(MapPreprocess):
 
         elif self.conf.depth_preprocess.downscale_method == 'max_pool':
             new_data_frame = np.amax(new_data_frame, axis=(1, 3))
-            
+
         else:
             new_data_frame = np.mean(new_data_frame, axis=(1, 3))
 
