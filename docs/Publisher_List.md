@@ -1,21 +1,28 @@
 # Publisher Data Packets
 
-## Realsense
+## Table of Contents
+- [Realsense](#realsense)
+- [Map](#map)
 
-### Depth Data
-- timestamp (float32)
-- data [x, y] (uint16/y16)
+## <a name="realsense"></a>Realsense
+
+### <a name="Intrinsics"></a>Intrinsics
 - scale (float32)
 - ppx (float32)
 - ppy (float32)
 - fx (float32)
 - fy (float32)
 
+### Depth Data
+- timestamp (float32)
+- data [x, y] (uint16/y16)
+- intrin: **[Intrinsics](#Intrinsics)**
+
 ### Color Data
 - timestamp (float32)
 - data [x, y, 3] (uint8/bgr8)
 
-### Pose
+### <a name="Pose"></a>Pose
 - timestamp (float32)
 - translation_x (float32)
 - translation_y (float32)
@@ -25,3 +32,15 @@
 - quat_z (float32)
 - quat_w (float32)
 - conf (uint8)
+
+## <a name="map"></a>Map
+
+### MapPreProcessorIn
+- timestamp: (float32)
+- points: np.array
+- pose: **[Pose](#Pose)**
+
+### MapPreProcessorOut
+- timestamp (float32)
+- voxels: (float32)
+- count: (uint16)

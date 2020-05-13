@@ -22,3 +22,13 @@ class Pose(NamedTuple):
 class Color(NamedTuple):
     timestamp: float
     image: np.array
+
+class MapPreProcessorIn(NamedTuple):
+    timestamp: float
+    points: np.array
+    pose: Pose
+
+class MapPreProcessorOut(NamedTuple):
+    timestamp: float
+    voxels: np.array
+    count: np.array

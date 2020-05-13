@@ -6,7 +6,6 @@ import time
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-import cv2
 
 from modules.async_message import AsyncMessageCallback
 from modules import load_config, data_types
@@ -38,26 +37,21 @@ class MapPreprocess:
                                   self.conf.map.z_max,
                                   self.conf.map.z_divisions)
 
-    def process_local_point_cloud(self, point_cloud, pose):
+    def process_local_point_cloud(self, data_set):
         """
         Process batches of local point clouds
         """
-        point_cloud = self._local_to_global(point_cloud, pose)
+        point_cloud = self._local_to_global(data_set.points, data_set.pose)
 
         map_points, point_count = self._discretise_point_cloud(point_cloud)
 
-        map_points, point_count = self._batch_filter(map_points, point_count)
+        self.publish_data_set(data_set.timestamp, map_points, point_count)
 
-        self.publish_data_set(map_points, point_count)
-
-    def publish_data_set(self, points, count):
+    def publish_data_set(self, timestamp, points, count):
         """
         Passes data to Rabbit MQ
         """
-        new_time = time.time()
-        tdif = new_time - self.last_time
-        self.last_time = new_time
-        print("Time:{:.4f}\tNumer of voxels: {}".format(tdif, points.shape[0]))
+        data_set = data_types.MapPreProcessorOut(timestamp, points, count)
 
     def _local_to_global(self, local_points, pose):
         """
@@ -83,6 +77,7 @@ class MapPreprocess:
 
         count = None
         points, count = self._compress_point_cloud(points)
+        points, count = self._batch_filter(points, count)
 
         return points, count
 
@@ -148,7 +143,11 @@ class DepthMapAdapter(MapPreprocess):
         depth_frame = self._pre_process(depth_data.depth, depth_data.intrin)
         coord = self._deproject_frame(depth_frame, depth_data.intrin)
 
-        self.process_local_point_cloud(coord, pose_data)
+        data_set = data_types.MapPreProcessorIn(timestamp=depth_data.timestamp,
+                                                points=coord,
+                                                pose=pose_data)
+
+        self.process_local_point_cloud(data_set)
 
     def _pre_process(self, depth_frame, intrin: data_types.Intrinsics):
         """
