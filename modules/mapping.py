@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import io
 from scipy.interpolate import RegularGridInterpolator as RGI
 
 from modules import async_message, load_config, data_types
@@ -8,13 +7,13 @@ from modules import async_message, load_config, data_types
 class Map:
     def __init__(self, config_file='conf/map.yaml'):
         self.conf = load_config.from_file(config_file)
-        self.interp_func = None
+        self._interp_func = None
 
         self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
                                                               self.conf.map.shape)
 
-        self.bins = self.initialise_bins(self.map_definition)
-        self.grid = self.initialise_grid(self.map_definition)
+        self._bins = self.initialise_bins(self.map_definition)
+        self._grid = self.initialise_grid(self.map_definition)
 
         self._initialise_interp_func()
 
@@ -55,32 +54,25 @@ class Map:
         """
         self.new_map_data.queue_message(data)
 
-    def save_to_matlab(self, filename):
-        """
-        Save the grid to a matlab object
-        """
-        io.savemat(filename, mdict=dict(map=self.grid), do_compression=False)
-
-    def _initialise_interp_func(self):
+    def _initialise_interp_func(self, interp_method='linear'):
         """
         """
-        self.interp_func = RGI(self.bins, self.grid,
-                               method='linear',
-                               bounds_error=False,
-                               fill_value=np.nan)
+        self._interp_func = RGI(self._bins, self._grid,
+                                method=interp_method,
+                                bounds_error=False,
+                                fill_value=np.nan)
 
     def _update_map(self):
         """
-        Adds count at (N,3) coordiante points array to grid
+        Adds count at List of tuples with shape (3,N) coordiante points array to grid
         """
-        new_data = self.new_map_data.wait_for_message()
+        _, new_data = self.new_map_data.wait_for_message()
+        np.add.at(self._grid, new_data.voxels, new_data.count)
 
-        np.add.at(self.grid, new_data.voxels, new_data.count)
-
-        self.interp_func.values = self.grid
+        self._interp_func.values = self._grid
 
     def _query_map(self, query_points):
         """
         Returns occupancy value for each cooridnate provided
         """
-        return self.interp_func(query_points)
+        return self._interp_func(query_points)
