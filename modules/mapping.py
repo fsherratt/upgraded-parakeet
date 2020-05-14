@@ -1,16 +1,20 @@
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy import io
+from scipy.interpolate import RegularGridInterpolator as RGI
 
-from modules import load_config, async_message
+from modules import async_message, load_config, data_types
+
 
 class Map:
     def __init__(self, config_file='conf/map.yaml'):
         self.conf = load_config.from_file(config_file)
         self.interp_func = None
 
-        self.bins = self.initialise_bins(self.conf)
-        self.grid = self.initialise_grid(self.conf)
+        self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
+                                                              self.conf.map.shape)
+
+        self.bins = self.initialise_bins(self.map_definition)
+        self.grid = self.initialise_grid(self.map_definition)
 
         self._initialise_interp_func()
 
@@ -21,15 +25,15 @@ class Map:
         """
         Initialise grid divisions
         """
-        x_bins = np.linspace(map_conf.map.size.x_min,
-                             map_conf.map.size.x_max,
-                             map_conf.map.resolution.x_divisions)
-        y_bins = np.linspace(map_conf.map.size.y_min,
-                             map_conf.map.size.y_max,
-                             map_conf.map.resolution.y_divisions)
-        z_bins = np.linspace(map_conf.map.size.z_min,
-                             map_conf.map.size.z_max,
-                             map_conf.map.resolution.z_divisions)
+        x_bins = np.linspace(map_conf.x_min,
+                             map_conf.x_max,
+                             map_conf.x_divisions)
+        y_bins = np.linspace(map_conf.y_min,
+                             map_conf.y_max,
+                             map_conf.y_divisions)
+        z_bins = np.linspace(map_conf.z_min,
+                             map_conf.z_max,
+                             map_conf.z_divisions)
 
         return (x_bins, y_bins, z_bins)
 
@@ -38,9 +42,9 @@ class Map:
         """
         Setup grid system
         """
-        grid = np.zeros((map_conf.map.resolution.x_divisions,
-                         map_conf.map.resolution.y_divisions,
-                         map_conf.map.resolution.z_divisions),
+        grid = np.zeros((map_conf.x_divisions,
+                         map_conf.y_divisions,
+                         map_conf.z_divisions),
                         dtype=np.int16)
 
         return grid
