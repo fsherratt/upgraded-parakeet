@@ -24,10 +24,9 @@ class TestMap(TestCase):
         """
         Test addition of voxel data to the map
         """
-        mock_voxels = np.asarray([[0, 0, 0], [0, 0, 1]]).transpose()
-        mock_voxels = list(map(tuple, mock_voxels))
+        mock_voxels = [(0, 0), (0, 0), (0, 1)]
         mock_count = [1, 2]
-        mock_wait.return_value = (0, data_types.MapPreProcessorOut(0, mock_voxels, mock_count))
+        mock_wait.return_value = (0, data_types.MapPreProcessorOut(0, np.asarray(mock_voxels).transpose(), mock_count))
 
         self.map._update_map()
 
@@ -42,7 +41,7 @@ class TestMap(TestCase):
         """
         self.map._initialise_interp_func(interp_method='linear')
         
-        self.map.add_map_data_callback(data_types.MapPreProcessorOut(0, (0,0,0), 1))
+        self.map.add_map_data_callback(data_types.MapPreProcessorOut(0, np.asarray([[0,0,0]]), 1))
         self.map._update_map()
 
         point = (self.map._map_shape.x_min, self.map._map_shape.y_min, self.map._map_shape.z_min)

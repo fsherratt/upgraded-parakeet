@@ -67,7 +67,9 @@ class Map:
         Adds count at List of tuples with shape (3,N) coordiante points array to grid
         """
         _, new_data = self.new_map_data.wait_for_message()
-        np.add.at(self._grid, new_data.voxels, new_data.count)
+        voxels = list(map(tuple, new_data.voxels.transpose()))
+        
+        np.add.at(self._grid, voxels, new_data.count)
 
         self._interp_func.values = self._grid
 
