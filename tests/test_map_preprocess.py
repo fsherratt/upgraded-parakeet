@@ -73,8 +73,6 @@ class TestMapPreprocess(TestCase):
         np.testing.assert_equal(test_result, rtn_set)
         np.testing.assert_equal(test_count, rtn_cnt)
 
-    def test_ouput(self):
-        pass
 
 class TestDepthAdapter(TestCase):
     def setUp(self):
@@ -128,8 +126,8 @@ class TestDepthAdapter(TestCase):
         # Scale, PPx, PPy, Fx, Fy
         intrin = data_types.Intrinsics(scale=0, ppx=319.5, ppy=239.5, fx=2, fy=2)
 
-        matricies = self.map_pre._initialise_deprojection_matrix(frame_shape, intrin)
-        x_deproject_matrix, y_deproject_matrix = matricies
+        matrices = self.map_pre._initialise_deprojection_matrix(frame_shape, intrin)
+        x_deproject_matrix, y_deproject_matrix = matrices
 
         # Check it is initialised in the correct shape
         self.assertEqual(x_deproject_matrix.shape, frame_shape)

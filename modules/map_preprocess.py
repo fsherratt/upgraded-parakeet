@@ -22,11 +22,11 @@ class MapPreprocess:
         self.y_bins = None
         self.z_bins = None
 
-        self._initialise_bin_dilimitators()
+        self._initialise_bin_delimitations()
 
         self.last_time = time.time()
 
-    def _initialise_bin_dilimitators(self):
+    def _initialise_bin_delimitations(self):
         self.x_bins = np.linspace(self.conf.map.size.x_min,
                                   self.conf.map.size.x_max,
                                   self.conf.map.resolution.x_divisions)
@@ -86,7 +86,7 @@ class MapPreprocess:
 
     def _compress_point_cloud(self, points):
         """
-        Take a discritised point cloud and compress to cummalative
+        Take a discritised point cloud and compress to cumulative
         counts of unique points
         """
         points, count = np.unique(points, axis=0, return_counts=True)
@@ -119,7 +119,7 @@ class DepthMapAdapter(MapPreprocess):
 
     def depth_callback(self, data: data_types.Depth):
         """
-        Recieve incoming depth data
+        Receive incoming depth data
         """
         if self._pose_data is None:
             return
@@ -128,7 +128,7 @@ class DepthMapAdapter(MapPreprocess):
 
     def pose_callback(self, data: data_types.Pose):
         """
-        Recieve incoming pose data
+        Receive incoming pose data
         """
         self._pose_data = data
 
@@ -154,7 +154,7 @@ class DepthMapAdapter(MapPreprocess):
 
     def _pre_process(self, depth_frame, intrin: data_types.Intrinsics):
         """
-        Any pre-processing before deprojection
+        Any pre-processing before de-projection
         """
         depth_frame, intrin = self._downscale_data(depth_frame, intrin)
         depth_frame = self._scale_depth_frame(depth_frame, intrin.scale)
@@ -203,7 +203,7 @@ class DepthMapAdapter(MapPreprocess):
 
     def _deproject_frame(self, depth_frame, intrin: data_types.Intrinsics):
         """
-        Deproject depth image to local cartesian coordinate system
+        De-project depth image to local cartesian coordinate system
         """
         frame_shape = depth_frame.shape
         x_deproject, y_deproject = self._initialise_deprojection_matrix(frame_shape, intrin)
