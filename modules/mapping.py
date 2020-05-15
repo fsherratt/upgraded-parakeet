@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator as RGI
 
-from modules import async_message, load_config, data_types
+from modules import async_message, data_types, load_config
 
 
 class Map:
@@ -15,7 +15,7 @@ class Map:
         self._bins = self.initialise_bins(self.map_definition)
         self._grid = self.initialise_grid(self.map_definition)
 
-        self._initialise_interp_func()
+        self._initialise_interp_func(self.conf.map.interp_function)
 
         self.new_map_data = async_message.AsyncMessageCallback()
 
@@ -56,6 +56,7 @@ class Map:
 
     def _initialise_interp_func(self, interp_method='linear'):
         """
+        Initialiser for interpolation function
         """
         self._interp_func = RGI(self._bins, self._grid,
                                 method=interp_method,
@@ -64,11 +65,11 @@ class Map:
 
     def _update_map(self):
         """
-        Adds count at List of tuples with shape (3,N) coordiante points array to grid
+        Adds count at List of tuples with shape (3,N) coordinates points array to grid
         """
         _, new_data = self.new_map_data.wait_for_message()
         voxels = list(map(tuple, new_data.voxels.transpose()))
-        
+
         np.add.at(self._grid, voxels, new_data.count)
 
         self._interp_func.values = self._grid

@@ -11,6 +11,8 @@ map:
     y_divisions: 50
     z_divisions: 10
 
+  interp_function: 'linear'
+
 depth_preprocess:
   max_range: 10
   min_range: 0.1
