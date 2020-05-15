@@ -6,18 +6,20 @@ from modules import async_message, data_types, load_config
 
 class Map:
     def __init__(self, config_file='conf/map.yaml'):
-        self.conf = load_config.from_file(config_file)
+        self._bins = None
+        self._grid = None
+        self._map_shape = None
+        
         self._interp_func = None
 
-        self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
+        self.conf = load_config.from_file(config_file)
+        map_shape = load_config.conf_to_named_tuple(data_types.MapDefinition,
                                                               self.conf.map.shape)
 
-        self._bins = self.initialise_bins(self.map_definition)
-        self._grid = self.initialise_grid(self.map_definition)
-
+        self._setup_grid(map_shape)
         self._initialise_interp_func(self.conf.map.interp_function)
 
-        self.new_map_data = async_message.AsyncMessageCallback()
+        self.new_map_data = async_message.AsyncMessageCallback(queue_size=1)
 
     @staticmethod
     def initialise_bins(map_conf):
@@ -54,6 +56,11 @@ class Map:
         """
         self.new_map_data.queue_message(data)
 
+    def _setup_grid(self, map_shape):
+        self._map_shape = map_shape
+        self._bins = self.initialise_bins(map_shape)
+        self._grid = self.initialise_grid(map_shape)
+
     def _initialise_interp_func(self, interp_method='linear'):
         """
         Initialiser for interpolation function
@@ -67,10 +74,15 @@ class Map:
         """
         Adds count at List of tuples with shape (3,N) coordinates points array to grid
         """
-        _, new_data = self.new_map_data.wait_for_message()
-        voxels = list(map(tuple, new_data.voxels.transpose()))
+        data = self.new_map_data.wait_for_message()
+        
+        if data is None:
+            return
 
-        np.add.at(self._grid, voxels, new_data.count)
+        new_data = data[1]
+        voxels = tuple(map(tuple, new_data.voxels.transpose()))
+
+        np.add.at(self._grid, voxels, new_data.count)    
 
         self._interp_func.values = self._grid
 

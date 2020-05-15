@@ -15,9 +15,7 @@ class TestMap(TestCase):
                                x_max=1, y_max=1, z_max=1,
                                x_divisions=10, y_divisions=10, z_divisions=10)
                                
-        self.map._map_shape = self.test_map_shape
-        self.map._bins = self.map.initialise_bins(self.test_map_shape)
-        self.map._grid = self.map.initialise_grid(self.test_map_shape)
+        self.map._setup_grid(self.test_map_shape)
 
     @mock.patch('modules.async_message.AsyncMessageCallback.wait_for_message')
     def test_map_update(self, mock_wait):
@@ -44,7 +42,7 @@ class TestMap(TestCase):
         self.map.add_map_data_callback(data_types.MapPreProcessorOut(0, np.asarray([[0,0,0]]), 1))
         self.map._update_map()
 
-        point = (self.map._map_shape.x_min, self.map._map_shape.y_min, self.map._map_shape.z_min)
+        point = (self.test_map_shape.x_min, self.test_map_shape.y_min, self.test_map_shape.z_min)
 
         rtn_val = self.map._query_map(point)
         

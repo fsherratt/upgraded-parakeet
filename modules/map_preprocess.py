@@ -109,6 +109,8 @@ class MapPreprocess:
         z_sort = np.digitize(points[:, 2], self._bins[2]) - 1
 
         voxels = np.column_stack((x_sort, y_sort, z_sort))
+        voxels[voxels < 0] = 0
+
         voxels = np.uint16(voxels)
 
         if self.conf.depth_preprocess.enable_compression:
