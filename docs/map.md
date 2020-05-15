@@ -5,16 +5,16 @@
     - [D435 Pre-processing](#d435_preprocessor)
 
 # <a name="the_map"></a>The Map
-The map is an occupancy map of all objects that have been detected by the onboard sensing.
+The map is an occupancy map of all points that have been detected by the onboard sensing.
 
-## <a name="grid"></a>Grid definition
-The grid resolution and size are defined by the _map.size_ and _map.resolution_ parameter.
+### <a name="grid"></a>Grid definition
+The grid resolution and size are defined by the _map.shape_ parameters. These define the x, y & z limits and the number of divisions in each axis
 
-## <a name="map_query"></a>Quering the map
-TODO
+### <a name="map_query"></a>Quering the map
+The map can be queried using the _query\_map_ function. Passing an array of cooridnates returns the linearly interpolated value for their position. The grid coordinates must be within the grid boundaries, if outside _nan_ is returned.
 
-## <a name="update_map"></a>Updating
-TODO
+### <a name="update_map"></a>Updating
+The map is update by passing a Nx3 matrix or coordinates a long with a vector of values to add at those coordinates.
 
 # <a name="preprocessor"></a>Pre-Processor
 The preprocessor prepares data for addition into grid. The primary benefit of this is that the more computational intensive de-projection/discretisation methods can be parallelised for greater performance.
