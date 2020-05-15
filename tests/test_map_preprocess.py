@@ -39,15 +39,14 @@ class TestMapPreprocess(TestCase):
         np.testing.assert_almost_equal(rtn, [1, 1, 0])
 
     def test_discritise_point_cloud(self):
-        size = self.map_pre.conf.map.size
-        res = self.map_pre.conf.map.resolution
-        test_coord = np.asarray([[size.x_min, size.y_min, size.z_min],
-                                 [size.x_max, size.y_max,size.z_max]])
+        map_shape = self.map_pre.map_definition
+        test_coord = np.asarray([[map_shape.x_min, map_shape.y_min, map_shape.z_min],
+                                 [map_shape.x_max, map_shape.y_max, map_shape.z_max]])
 
         return_coord = np.asarray([[0, 0, 0],
-                                   [res.x_divisions - 1,
-                                   res.y_divisions - 1,
-                                   res.z_divisions - 1]])
+                                   [map_shape.x_divisions - 1,
+                                    map_shape.y_divisions - 1,
+                                    map_shape.z_divisions - 1]])
 
         self.map_pre.conf.map.enable_compression = False
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)

@@ -17,25 +17,26 @@ class MapPreprocess:
     """
     def __init__(self, config_file='conf/map.yaml'):
         self.conf = load_config.from_file(config_file)
+        self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
+                                                              self.conf.map.shape)
 
-        self.x_bins = None
-        self.y_bins = None
-        self.z_bins = None
-
+        self.bins = None
         self._initialise_bin_delimitations()
 
         self.last_time = time.time()
 
     def _initialise_bin_delimitations(self):
-        self.x_bins = np.linspace(self.conf.map.size.x_min,
-                                  self.conf.map.size.x_max,
-                                  self.conf.map.resolution.x_divisions)
-        self.y_bins = np.linspace(self.conf.map.size.y_min,
-                                  self.conf.map.size.y_max,
-                                  self.conf.map.resolution.y_divisions)
-        self.z_bins = np.linspace(self.conf.map.size.z_min,
-                                  self.conf.map.size.z_max,
-                                  self.conf.map.resolution.z_divisions)
+        x_bins = np.linspace(self.map_definition.x_min,
+                             self.map_definition.x_max,
+                             self.map_definition.x_divisions)
+        y_bins = np.linspace(self.map_definition.y_min,
+                             self.map_definition.y_max,
+                             self.map_definition.y_divisions)
+        z_bins = np.linspace(self.map_definition.z_min,
+                             self.map_definition.z_max,
+                             self.map_definition.z_divisions)
+
+        self.bins = (x_bins, y_bins, z_bins)
 
     def process_local_point_cloud(self, data_set):
         """
@@ -71,9 +72,9 @@ class MapPreprocess:
         """
         Take continous point cloud and discritise to map grid
         """
-        x_sort = np.digitize(points[:, 0], self.x_bins) -1
-        y_sort = np.digitize(points[:, 1], self.y_bins) -1
-        z_sort = np.digitize(points[:, 2], self.z_bins) -1
+        x_sort = np.digitize(points[:, 0], self.bins[0]) - 1
+        y_sort = np.digitize(points[:, 1], self.bins[1]) - 1
+        z_sort = np.digitize(points[:, 2], self.bins[2]) - 1
 
         points = np.column_stack((x_sort, y_sort, z_sort))
         points = np.uint16(points)

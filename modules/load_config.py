@@ -1,4 +1,7 @@
-from omegaconf import OmegaConf
+from typing import NamedTuple
+
+from omegaconf import DictConfig, OmegaConf
+
 
 def from_file(config_file=None, use_cli_input=True):
     if config_file is None and not use_cli_input:
@@ -16,3 +19,6 @@ def from_file(config_file=None, use_cli_input=True):
         conf = conf_cli
 
     return conf
+
+def conf_to_named_tuple(dtype_class: NamedTuple, kwargs: DictConfig):
+    return dtype_class.__new__(dtype_class, **kwargs)
