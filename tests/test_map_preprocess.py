@@ -38,17 +38,30 @@ class TestMapPreprocess(TestCase):
         rtn = self.map_pre._local_to_global(test_local_point, test_pose)
         np.testing.assert_almost_equal(rtn, [1, 1, 0])
 
-    @mock.patch('modules.map_preprocess.MapPreprocess._compress_point_cloud')
-    def test_discritise_point_cloud(self, mock_compress):
-        test_coord = np.asarray([self.map_pre.conf.map.size.x_min,
-                                 self.map_pre.conf.map.size.y_min,
-                                 self.map_pre.conf.map.size.z_min])
+    def test_discritise_point_cloud(self):
+        size = self.map_pre.conf.map.size
+        res = self.map_pre.conf.map.resolution
+        test_coord = np.asarray([[size.x_min, size.y_min, size.z_min],
+                                 [size.x_max, size.y_max,size.z_max]])
 
-        test_coord = np.reshape(test_coord, (1, -1))
-        mock_compress.side_effect = lambda x: (x, 1)
+        return_coord = np.asarray([[0, 0, 0],
+                                   [res.x_divisions - 1,
+                                   res.y_divisions - 1,
+                                   res.z_divisions - 1]])
+
+        self.map_pre.conf.map.enable_compression = False
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)
 
-        np.testing.assert_equal([0, 0, 0], rtn[0, :])
+        np.testing.assert_equal(return_coord, rtn)
+        np.testing.assert_equal(count, 1) # 1 returned when compression is off
+        self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
+
+        self.map_pre.conf.map.enable_compression = True
+        rtn, count = self.map_pre._discretise_point_cloud(test_coord)
+
+        np.testing.assert_equal(return_coord, rtn)
+        np.testing.assert_equal(count, [1, 1]) # 1 returned when compression is off
+        self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
 
     def test_compress_point_cloud(self):
         test_set = np.asarray([[0, 0, 0], [0, 0, 0], [1, 0, 0]])
@@ -59,6 +72,9 @@ class TestMapPreprocess(TestCase):
 
         np.testing.assert_equal(test_result, rtn_set)
         np.testing.assert_equal(test_count, rtn_cnt)
+
+    def test_ouput(self):
+        pass
 
 class TestDepthAdapter(TestCase):
     def setUp(self):

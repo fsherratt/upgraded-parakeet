@@ -41,9 +41,12 @@ class MapPreprocess:
         """
         Process batches of local point clouds
         """
-        point_cloud = self._local_to_global(data_set.points, data_set.pose)
-
-        map_points, point_count = self._discretise_point_cloud(point_cloud)
+        map_points = self._local_to_global(data_set.points, data_set.pose)
+        
+        if self.conf.map.enable_compression:
+            map_points, point_count = self._discretise_point_cloud(map_points)
+        else:
+            point_count = 1
 
         self.publish_data_set(data_set.timestamp, map_points, point_count)
 
