@@ -43,7 +43,7 @@ class MapPreprocess:
         Process batches of local point clouds
         """
         map_points = self._local_to_global(data_set.points, data_set.pose)
-        
+
         if self.conf.map.enable_compression:
             map_points, point_count = self._discretise_point_cloud(map_points)
         else:
@@ -157,13 +157,13 @@ class DepthMapAdapter(MapPreprocess):
         """
         Any pre-processing before de-projection
         """
-        depth_frame, intrin = self._downscale_data(depth_frame, intrin)
+        depth_frame = self._downscale_data(depth_frame)
         depth_frame = self._scale_depth_frame(depth_frame, intrin.scale)
         depth_frame = self._limit_depth_range(depth_frame)
 
         return depth_frame
 
-    def _downscale_data(self, data_frame, intrin: data_types.Intrinsics):
+    def _downscale_data(self, data_frame):
 
         block_size = tuple(self.conf.depth_preprocess.downscale_block_size)
         shape = data_frame.shape
@@ -171,22 +171,21 @@ class DepthMapAdapter(MapPreprocess):
         new_shape = (shape[0]//block_size[0], block_size[0], shape[1]//block_size[1], block_size[1])
         new_data_frame = np.reshape(data_frame, new_shape)
 
-        if self.conf.depth_preprocess.downscale_method == 'min_pool':
+        downscale_method = self.conf.depth_preprocess.downscale_method
+
+        if downscale_method == 'min_pool':
             new_data_frame = np.amin(new_data_frame, axis=(1, 3))
 
-        elif self.conf.depth_preprocess.downscale_method == 'max_pool':
+        elif downscale_method == 'max_pool':
             new_data_frame = np.amax(new_data_frame, axis=(1, 3))
 
-        else:
+        elif downscale_method == 'mean':
             new_data_frame = np.mean(new_data_frame, axis=(1, 3))
 
-        new_intrin = data_types.Intrinsics(intrin.scale,
-                                           intrin.ppx / block_size[1],
-                                           intrin.ppy / block_size[0],
-                                           intrin.fx,
-                                           intrin.fy)
+        else:
+            raise RuntimeError('Downscaling method `{}` unknown'.format(downscale_method))
 
-        return new_data_frame, new_intrin
+        return new_data_frame
 
     def _scale_depth_frame(self, depth_frame, scale):
         """
@@ -226,9 +225,10 @@ class DepthMapAdapter(MapPreprocess):
         coordinate system
         """
         matrix_height, matrix_width = matrix_shape
+        block_height, block_width = tuple(self.conf.depth_preprocess.downscale_block_size)
 
-        x_deproject_row = (np.arange(matrix_width) - intrin.ppx) / intrin.fx
-        y_deproject_col = (np.arange(matrix_height) - intrin.ppy) / intrin.fy
+        x_deproject_row = ((np.arange(matrix_width) * block_width) - intrin.ppx) / intrin.fx
+        y_deproject_col = ((np.arange(matrix_height) * block_height) - intrin.ppy) / intrin.fy
 
         x_deproject_matrix = np.tile(x_deproject_row, (matrix_height, 1))
         y_deproject_matrix = np.tile(y_deproject_col, (matrix_width, 1)).transpose()

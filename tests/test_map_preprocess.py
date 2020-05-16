@@ -108,7 +108,7 @@ class TestDepthAdapter(TestCase):
         """
         Test process depth frame calls required methods - Probably a stupid test
         """
-        mock_downscale.side_effect = lambda x, y: (x, y)
+        mock_downscale.side_effect = lambda x: x
 
         intrin = data_types.Intrinsics(scale=0, ppx=0, ppy=0, fx=0, fy=0)
         self.map_pre._pre_process(1, intrin)
@@ -121,6 +121,7 @@ class TestDepthAdapter(TestCase):
         Check deprojection matrix is initialised correctly
         """
         frame_shape = (480, 640)
+        self.map_pre.conf.depth_preprocess.downscale_block_size = [1, 1]
 
         # Scale, PPx, PPy, Fx, Fy
         intrin = data_types.Intrinsics(scale=0, ppx=319.5, ppy=239.5, fx=2, fy=2)
@@ -164,22 +165,18 @@ class TestDepthAdapter(TestCase):
 
     def test_downscale_data(self):
         test_block_size = (2, 2)
-        test_intrin = data_types.Intrinsics(scale=0, ppx=1, ppy=1, fx=0, fy=0)
         test_data_frame = np.asarray([[0, 1], [0, 1]])
 
         self.map_pre.conf.depth_preprocess.downscale_block_size = test_block_size
 
         self.map_pre.conf.depth_preprocess.downscale_method = 'mean'
-        rtn_data, rtn_intrin = self.map_pre._downscale_data(test_data_frame, test_intrin)
+        rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 0.5)
 
         self.map_pre.conf.depth_preprocess.downscale_method = 'min_pool'
-        rtn_data, rtn_intrin = self.map_pre._downscale_data(test_data_frame, test_intrin)
+        rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 0)
 
         self.map_pre.conf.depth_preprocess.downscale_method = 'max_pool'
-        rtn_data, rtn_intrin = self.map_pre._downscale_data(test_data_frame, test_intrin)
+        rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 1)
-
-        self.assertEqual(rtn_intrin.ppx, test_intrin.ppx / test_block_size[1])
-        self.assertEqual(rtn_intrin.ppy, test_intrin.ppy / test_block_size[0])
