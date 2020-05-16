@@ -22,7 +22,7 @@ class TestMap(TestCase):
         """
         Test addition of voxel data to the map
         """
-        mock_voxels = [(0, 0), (0, 0), (0, 1)]
+        mock_voxels = ((0, 0), (0, 0), (0, 1))
         mock_count = [1, 2]
         mock_wait.return_value = (0, data_types.MapPreProcessorOut(0, np.asarray(mock_voxels).transpose(), mock_count))
 
