@@ -35,11 +35,6 @@
 
 ## <a name="map"></a>Map
 
-### <a name="MapPreProcessorIn"></a>MapPreProcessorIn
-- timestamp: (float32)
-- points: np.array
-- pose: **[Pose](#Pose)**
-
 ### <a name="MapPreProcessorOut"></a>MapPreProcessorOut
 - timestamp (float32)
 - voxels: (float32)

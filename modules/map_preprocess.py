@@ -7,8 +7,9 @@ import time
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+from modules import data_types, load_config
 from modules.async_message import AsyncMessageCallback
-from modules import load_config, data_types
+
 
 class MapPreprocess:
     """
@@ -23,7 +24,62 @@ class MapPreprocess:
         self.bins = None
         self._initialise_bin_delimitations()
 
+        self.message_queue = AsyncMessageCallback(queue_size=1)
+        self._pose_data = None
+
         self.last_time = time.time()
+
+    def depth_callback(self, data: data_types.Depth):
+        """
+        Receive incoming depth data
+        """
+        if self._pose_data is None:
+            return
+
+        self.message_queue.queue_message((data, self._pose_data))
+
+    def pose_callback(self, data: data_types.Pose):
+        """
+        Receive incoming pose data
+        """
+        self._pose_data = data
+
+    def process_incoming_data(self):
+        """
+        Process batches of local point clouds
+        """
+        data_in = self.message_queue.wait_for_message()
+
+        if data_in is None:
+            return None
+        
+        data, pose = data_in[1]
+
+        data = self._input_data_preprocess(data)
+        points, count = self._point_data_to_map(data, pose)
+
+        return data_types.MapPreProcessorOut(data_in[0], points, count)
+
+    def _input_data_preprocess(self, data):
+        """
+        Taken the raw data and convert to a standardised (Nx3) matrix of local
+        cartesian cooridantes. This function should be overriden by child class
+        """
+        raise NotImplementedError
+
+    def _point_data_to_map(self, point_cloud, pose):
+        """
+        Take coordinate array and convert to a set of map voxel coordinates and
+        a hit count for each voxel
+        """
+        map_points = self._local_to_global(point_cloud, pose)
+
+        if self.conf.map.enable_compression:
+            map_points, point_count = self._discretise_point_cloud(map_points)
+        else:
+            point_count = 1
+
+        return (map_points, point_count)
 
     def _initialise_bin_delimitations(self):
         x_bins = np.linspace(self.map_definition.x_min,
@@ -37,25 +93,6 @@ class MapPreprocess:
                              self.map_definition.z_divisions)
 
         self.bins = (x_bins, y_bins, z_bins)
-
-    def process_local_point_cloud(self, data_set):
-        """
-        Process batches of local point clouds
-        """
-        map_points = self._local_to_global(data_set.points, data_set.pose)
-
-        if self.conf.map.enable_compression:
-            map_points, point_count = self._discretise_point_cloud(map_points)
-        else:
-            point_count = 1
-
-        self.publish_data_set(data_set.timestamp, map_points, point_count)
-
-    def publish_data_set(self, timestamp, points, count):
-        """
-        Passes data to Rabbit MQ
-        """
-        data_set = data_types.MapPreProcessorOut(timestamp, points, count)
 
     def _local_to_global(self, local_points, pose):
         """
@@ -79,9 +116,10 @@ class MapPreprocess:
         points = np.column_stack((x_sort, y_sort, z_sort))
         points = np.uint16(points)
 
-        count = None
-        points, count = self._compress_point_cloud(points)
-        points, count = self._batch_filter(points, count)
+        if self.conf.map.enable_compression:
+            points, count = self._compress_point_cloud(points)
+        else:
+            count = 1
 
         return points, count
 
@@ -98,60 +136,15 @@ class MapPreprocess:
 
         return (points, count)
 
-    def _batch_filter(self, points, count):
-        """
-        Final filtering stage before adding to the map
-        """
-        return points, count
-
 class DepthMapAdapter(MapPreprocess):
     """
     Prepare D435 depth data for feeding into the occupancy map
     """
-    def __init__(self, config_file='conf/map.yaml'):
-        super().__init__(config_file)
+    def _input_data_preprocess(self, data):
+        depth_frame = self._pre_process(data.depth, data.intrin)
+        coord = self._deproject_frame(depth_frame, data.intrin)
 
-        self.depth_min_range = 0.1
-        self.depth_max_range = 10
-
-        self.depth_message_queue = AsyncMessageCallback(queue_size=1)
-
-        self._pose_data = None
-
-    def depth_callback(self, data: data_types.Depth):
-        """
-        Receive incoming depth data
-        """
-        if self._pose_data is None:
-            return
-
-        self.depth_message_queue.queue_message((data, self._pose_data))
-
-    def pose_callback(self, data: data_types.Pose):
-        """
-        Receive incoming pose data
-        """
-        self._pose_data = data
-
-    def adapter_pipeline(self):
-        """
-        Run incoming data through all processing steps
-        """
-        msg = self.depth_message_queue.wait_for_message()
-
-        if msg is None:
-            return
-
-        depth_data, pose_data = msg[1]
-
-        depth_frame = self._pre_process(depth_data.depth, depth_data.intrin)
-        coord = self._deproject_frame(depth_frame, depth_data.intrin)
-
-        data_set = data_types.MapPreProcessorIn(timestamp=depth_data.timestamp,
-                                                points=coord,
-                                                pose=pose_data)
-
-        self.process_local_point_cloud(data_set)
+        return coord
 
     def _pre_process(self, depth_frame, intrin: data_types.Intrinsics):
         """
@@ -164,7 +157,9 @@ class DepthMapAdapter(MapPreprocess):
         return depth_frame
 
     def _downscale_data(self, data_frame):
-
+        """
+        Downscale image to reduce noise and decrease computation time
+        """
         block_size = tuple(self.conf.depth_preprocess.downscale_block_size)
         shape = data_frame.shape
 
