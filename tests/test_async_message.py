@@ -27,7 +27,7 @@ class TestLoadConfig(TestCase):
         self.message_obj.queue_message('')
         self.message_obj._clear_message_event()
 
-        # This message should be silently dropped
+        # TODO: make messages drop more verbosely
         self.message_obj.queue_message('')
 
         # Check event is not set

@@ -37,7 +37,8 @@ class AsyncMessageCallback:
             self._message_queue.put_nowait((time.time(), data))
             self._set_message_event()
         except queue.Full:
-            pass # Silently drop message
+            #TODO: Add in logging for dropped messages
+            pass # Silently drop message for the moment
 
     def unblock_wait(self):
         """
