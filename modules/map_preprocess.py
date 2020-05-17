@@ -73,11 +73,8 @@ class MapPreprocess:
         a hit count for each voxel
         """
         map_points = self._local_to_global(point_cloud, pose)
+        map_points, point_count = self._discretise_point_cloud(map_points)
 
-        if self.conf.map.enable_compression:
-            map_points, point_count = self._discretise_point_cloud(map_points)
-        else:
-            point_count = 1
 
         return (map_points, point_count)
 
@@ -108,20 +105,22 @@ class MapPreprocess:
     def _discretise_point_cloud(self, points):
         """
         Take continous point cloud and discritise to map grid
+        returns a Nx3 matrix of voxel coordinates and a vector 
+        representing the number of hits in each voxel
         """
         x_sort = np.digitize(points[:, 0], self.bins[0]) - 1
         y_sort = np.digitize(points[:, 1], self.bins[1]) - 1
         z_sort = np.digitize(points[:, 2], self.bins[2]) - 1
 
-        points = np.column_stack((x_sort, y_sort, z_sort))
-        points = np.uint16(points)
+        voxels = np.column_stack((x_sort, y_sort, z_sort))
+        voxels = np.uint16(voxels)
 
-        if self.conf.map.enable_compression:
-            points, count = self._compress_point_cloud(points)
+        if self.conf.depth_preprocess.enable_compression:
+            voxels, voxel_hits = self._compress_point_cloud(voxels)
         else:
-            count = 1
+            voxel_hits = np.ones(voxels.shape[0])
 
-        return points, count
+        return voxels, voxel_hits
 
     def _compress_point_cloud(self, points):
         """
@@ -129,11 +128,11 @@ class MapPreprocess:
         counts of unique points
         """
         points, count = np.unique(points, axis=0, return_counts=True)
-
+    
         # Compress data
         points = np.uint16(points)
         count = np.uint16(count)
-
+        
         return (points, count)
 
 class DepthMapAdapter(MapPreprocess):

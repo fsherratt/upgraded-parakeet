@@ -48,18 +48,18 @@ class TestMapPreprocess(TestCase):
                                     map_shape.y_divisions - 1,
                                     map_shape.z_divisions - 1]])
 
-        self.map_pre.conf.map.enable_compression = False
+        self.map_pre.conf.depth_preprocess.enable_compression = False
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)
 
         np.testing.assert_equal(return_coord, rtn)
-        np.testing.assert_equal(count, 1) # 1 returned when compression is off
+        np.testing.assert_equal(count, [1, 1])
         self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
 
-        self.map_pre.conf.map.enable_compression = True
+        self.map_pre.conf.depth_preprocess.enable_compression = True
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)
 
         np.testing.assert_equal(return_coord, rtn)
-        np.testing.assert_equal(count, [1, 1]) # 1 returned when compression is off
+        np.testing.assert_equal(count, [1, 1])
         self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
 
     def test_compress_point_cloud(self):
