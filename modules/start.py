@@ -33,28 +33,13 @@ class Startup():
         """
         Module startup routine
         """
-        def test_func():
-            print('running')
-            time.sleep(3)
-
-        for i in range(10):
-            new_thread = threading.Thread(target=test_func,
-                                          name='thread_{}'.format(i),
-                                          daemon=True)
-
-            new_thread.start()
-            time.sleep(0.5)
-
-        time.sleep(10)
-
-        self.stop_callback()
-        # assert NotImplementedError       
+        assert NotImplementedError       
 
     def stop(self):
         """
         Used to elegantly shut down the module code
         """
-        # assert NotImplementedError
+        assert NotImplementedError
 
     def stop_callback(self):
         self.stop()
@@ -101,14 +86,33 @@ class Startup():
         #TODO: add publisher mechanism
         print(heartbeat)
 
+class TestStartup(Startup):
+    def start(self):
+        def test_func():
+            print('running')
+            time.sleep(3)
 
+        for i in range(10):
+            new_thread = threading.Thread(target=test_func,
+                                          name='thread_{}'.format(i),
+                                          daemon=True)
+
+            new_thread.start()
+            time.sleep(0.5)
+
+        time.sleep(10)
+
+        self.stop_callback()
+
+    def stop(self):
+        pass
+  
 
 if __name__ == "__main__":
 
-    tHealth = Startup()
+    tHealth = TestStartup()
 
     tHealth.run()
 
     # with tHealth:
     #     time.sleep(10)
-    # tHealth.run() # Run does not return
