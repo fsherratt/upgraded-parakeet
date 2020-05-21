@@ -13,11 +13,10 @@ class MapPreprocess:
     This class takes a localised point cloud and prepares it to
     be added to the global occupancy map
     """
-    def __init__(self, config_file='conf/map.yaml'):
+    def __init__(self, map_def: data_types.MapDefinition, config_file='conf/map.yaml'):
         self.conf = load_config.from_file(config_file)
 
-        self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
-                                                              self.conf.map.shape)
+        self._map_shape = map_def
 
         self._bins = None
         self._initialise_bin_delimitations()
@@ -75,15 +74,15 @@ class MapPreprocess:
         return (map_points, point_count)
 
     def _initialise_bin_delimitations(self):
-        x_bins = np.linspace(self.map_definition.x_min,
-                             self.map_definition.x_max,
-                             self.map_definition.x_divisions)
-        y_bins = np.linspace(self.map_definition.y_min,
-                             self.map_definition.y_max,
-                             self.map_definition.y_divisions)
-        z_bins = np.linspace(self.map_definition.z_min,
-                             self.map_definition.z_max,
-                             self.map_definition.z_divisions)
+        x_bins = np.linspace(self._map_shape.x_min,
+                             self._map_shape.x_max,
+                             self._map_shape.x_divisions)
+        y_bins = np.linspace(self._map_shape.y_min,
+                             self._map_shape.y_max,
+                             self._map_shape.y_divisions)
+        z_bins = np.linspace(self._map_shape.z_min,
+                             self._map_shape.z_max,
+                             self._map_shape.z_divisions)
 
         self._bins = (x_bins, y_bins, z_bins)
 

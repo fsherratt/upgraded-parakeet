@@ -9,13 +9,11 @@ from modules.mapping import Map
 
 class TestMap(TestCase):
     def setUp(self):
-        self.map = Map()
-
-        self.test_map_shape = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
-                               x_max=1, y_max=1, z_max=1,
-                               x_divisions=10, y_divisions=10, z_divisions=10)
-                               
-        self.map._setup_grid(self.test_map_shape)
+        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
+                                           x_max=1, y_max=1, z_max=1,
+                                           x_divisions=10, y_divisions=10, 
+                                           z_divisions=10)
+        self.map = Map(map_def=map_def)
 
     @mock.patch('modules.async_message.AsyncMessageCallback.wait_for_message')
     def test_map_update(self, mock_wait):
@@ -42,7 +40,7 @@ class TestMap(TestCase):
         self.map.add_map_data_callback(data_types.MapPreProcessorOut(0, np.asarray([[0,0,0]]), 1))
         self.map._update_map()
 
-        point = (self.test_map_shape.x_min, self.test_map_shape.y_min, self.test_map_shape.z_min)
+        point = (self.map._map_shape.x_min, self.map._map_shape.y_min, self.map._map_shape.z_min)
 
         rtn_val = self.map._query_map(point)
         
@@ -52,19 +50,19 @@ class TestMap(TestCase):
         """
         Test that grid bins are initilised correctly
         """
-        self.assertEqual(self.map._bins[0].min(), self.test_map_shape.x_min)
-        self.assertEqual(self.map._bins[1].min(), self.test_map_shape.y_min)
-        self.assertEqual(self.map._bins[2].min(), self.test_map_shape.z_min)
-        self.assertEqual(self.map._bins[0].max(), self.test_map_shape.x_max)
-        self.assertEqual(self.map._bins[1].max(), self.test_map_shape.y_max)
-        self.assertEqual(self.map._bins[2].max(), self.test_map_shape.z_max)
+        self.assertEqual(self.map._bins[0].min(), self.map._map_shape.x_min)
+        self.assertEqual(self.map._bins[1].min(), self.map._map_shape.y_min)
+        self.assertEqual(self.map._bins[2].min(), self.map._map_shape.z_min)
+        self.assertEqual(self.map._bins[0].max(), self.map._map_shape.x_max)
+        self.assertEqual(self.map._bins[1].max(), self.map._map_shape.y_max)
+        self.assertEqual(self.map._bins[2].max(), self.map._map_shape.z_max)
 
     def test_grid_initilisation(self):
         """
         Test that the map grid is initilised correctly
         """
-        grid_shape = (self.test_map_shape.x_divisions,
-                      self.test_map_shape.y_divisions,
-                      self.test_map_shape.z_divisions)
+        grid_shape = (self.map._map_shape.x_divisions,
+                      self.map._map_shape.y_divisions,
+                      self.map._map_shape.z_divisions)
 
         self.assertEqual(self.map._grid.shape, grid_shape)

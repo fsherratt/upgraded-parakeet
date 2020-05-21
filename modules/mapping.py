@@ -5,18 +5,15 @@ from modules import async_message, data_types, load_config
 
 
 class Map:
-    def __init__(self, config_file='conf/map.yaml'):
+    def __init__(self, map_def: data_types.MapDefinition, config_file='conf/map.yaml'):
+        self._map_shape = map_def
+        self.conf = load_config.from_file(config_file)
+
         self._bins = None
         self._grid = None
-        self._map_shape = None
-        
         self._interp_func = None
 
-        self.conf = load_config.from_file(config_file)
-        map_shape = load_config.conf_to_named_tuple(data_types.MapDefinition,
-                                                              self.conf.map.shape)
-
-        self._setup_grid(map_shape)
+        self._setup_grid()
         self._initialise_interp_func(self.conf.map.interp_function)
 
         self.new_map_data = async_message.AsyncMessageCallback(queue_size=1)
@@ -56,10 +53,9 @@ class Map:
         """
         self.new_map_data.queue_message(data)
 
-    def _setup_grid(self, map_shape):
-        self._map_shape = map_shape
-        self._bins = self.initialise_bins(map_shape)
-        self._grid = self.initialise_grid(map_shape)
+    def _setup_grid(self):
+        self._bins = self.initialise_bins(self._map_shape)
+        self._grid = self.initialise_grid(self._map_shape)
 
     def _initialise_interp_func(self, interp_method='linear'):
         """
