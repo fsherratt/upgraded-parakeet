@@ -38,3 +38,7 @@ class MapDefinition(NamedTuple):
     x_divisions: int
     y_divisions: int
     z_divisions: int
+
+class ProcessHeartbeat(NamedTuple):
+    process_name: str
+    thread_count: int
