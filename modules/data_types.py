@@ -22,7 +22,7 @@ class Pose(NamedTuple):
 class Color(NamedTuple):
     timestamp: float
     image: np.array
-    
+
 class MapPreProcessorOut(NamedTuple):
     timestamp: float
     voxels: np.array
@@ -40,5 +40,6 @@ class MapDefinition(NamedTuple):
     z_divisions: int
 
 class ProcessHeartbeat(NamedTuple):
+    timestamp: float
     process_name: str
     thread_count: int
