@@ -4,9 +4,21 @@ Startup modules
 """
 import argparse
 
-from modules import data_types, load_config
+from modules import load_config, data_types
 
+# Add new modules to the import list
+from modules import realsense
 
+# Add to the launch list any modules that can be run
+launch_list = {
+    # TAG: startup object
+    "rs_depth": realsense.DepthPipeline,
+    "rs_pose": realsense.PosePipeline,
+    "rs_color": realsense.ColorPipeline,
+    "rs_colour": realsense.ColorPipeline,
+}
+
+# ---DO NOT MODIFY BELOW THIS LINE---
 startup_list = []
 
 parser = argparse.ArgumentParser(description="Startup module(s)")
@@ -24,7 +36,6 @@ parser.add_argument(
     "-C",
     "--config_file",
     type=str,
-    nargs=1,
     default=None,
     help="Startup list config file",
 )
@@ -36,7 +47,7 @@ if args.config_file:
     conf = load_config.from_file(args.config_file, use_cli_input=False)
 
     for _ in conf.startup_list:
-        startup_list.extend(load_config.conf_to_named_tuple(data_types.StartupItem, _))
+        startup_list.append(load_config.conf_to_named_tuple(data_types.StartupItem, _))
 
 
 # Parse module list from CLI
@@ -57,9 +68,14 @@ if args.module:
                 module=_[0], config_file=_[1], process_name=_[2]
             )
 
-        startup_list.extend(new_item)
+        startup_list.append(new_item)
 
 
 # Launch modules
 for _ in startup_list:
-    print(_)
+    try:
+        item = launch_list.get(_.module)
+    except KeyError:
+        print("Oh No")
+
+    print(item)
