@@ -1,0 +1,16 @@
+---
+templates: &node
+    module: ''
+    config_file: null
+    process_name: ''
+
+startup_list:
+     -
+        <<: *node
+        module: 'rs_depth'
+        process_name: 'realsense_depth'
+     -
+        <<: *node
+        module: 'rs_pose'
+        process_name: 'realsense_pose'
+...

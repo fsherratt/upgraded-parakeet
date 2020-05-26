@@ -3,9 +3,9 @@ from typing import NamedTuple
 from omegaconf import DictConfig, OmegaConf
 
 
-def from_file(config_file=None, use_cli_input=True):
+def from_file(config_file=None, use_cli_input=True) -> DictConfig:
     if config_file is None and not use_cli_input:
-        raise AttributeError('No input specified')
+        raise AttributeError("No input specified")
 
     if use_cli_input:
         conf_cli = OmegaConf.from_cli()
@@ -19,6 +19,7 @@ def from_file(config_file=None, use_cli_input=True):
         conf = conf_cli
 
     return conf
+
 
 def conf_to_named_tuple(dtype_class: NamedTuple, kwargs: DictConfig):
     return dtype_class.__new__(dtype_class, **kwargs)
