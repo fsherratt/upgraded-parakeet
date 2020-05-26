@@ -4,10 +4,10 @@ import time
 from modules import data_types
 
 
-class Startup():
-    def __init__(self):
+class Startup:
+    def __init__(self, process_name):
         self.main_thread = None
-        self.process_name = 'test'
+        self.process_name = process_name
         self.active_threads = threading.enumerate()
 
         self.module_running = True

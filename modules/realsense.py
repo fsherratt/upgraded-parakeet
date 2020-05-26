@@ -2,12 +2,14 @@
 Realsense stream connection modules - abstracts the pyrealsense API
 """
 import time
+import argparse
 
 import numpy as np
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
 from modules import data_types, load_config
+from modules import startup
 
 
 class RealsensePipeline:
@@ -141,7 +143,7 @@ class DepthPipeline(RealsensePipeline):
         super().__init__(config_file)
 
         # private
-        self._object_name = self.conf.depth.object_name
+        self._object_name = self.conf.realsense.depth.object_name
 
         self._intrin = None
         self._fov = (0, 0)
@@ -151,11 +153,13 @@ class DepthPipeline(RealsensePipeline):
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
-        cfg.enable_stream(rs.stream.depth,
-                          self.conf.depth.width,
-                          self.conf.depth.height,
-                          rs.format.z16,
-                          self.conf.depth.framerate)
+        cfg.enable_stream(
+            rs.stream.depth,
+            self.conf.realsense.depth.width,
+            self.conf.realsense.depth.height,
+            rs.format.z16,
+            self.conf.realsense.depth.framerate,
+        )
         return cfg
 
     def _post_connect_process(self):
@@ -200,18 +204,20 @@ class ColorPipeline(RealsensePipeline):
         super().__init__(config_file)
 
         # private
-        self._object_name = self.conf.color.object_name
+        self._object_name = self.conf.realsense.color.object_name
 
     def wait_for_frame(self) -> data_types.Color:
         return super().wait_for_frame()
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
-        cfg.enable_stream(rs.stream.color,
-                          self.conf.color.width,
-                          self.conf.color.height,
-                          rs.format.bgr8,
-                          self.conf.color.framerate)
+        cfg.enable_stream(
+            rs.stream.color,
+            self.conf.realsense.color.width,
+            self.conf.realsense.color.height,
+            rs.format.bgr8,
+            self.conf.realsense.color.framerate,
+        )
         return cfg
 
     def _get_frame(self, frames: rs.composite_frame):
@@ -230,7 +236,7 @@ class PosePipeline(RealsensePipeline):
         super().__init__(config_file)
 
         # Private
-        self._object_name = self.conf.pose.object_name
+        self._object_name = self.conf.realsense.pose.object_name
 
         self._north_offset_deg = 0
         self._tilt_deg = 0
@@ -238,7 +244,7 @@ class PosePipeline(RealsensePipeline):
         self.h_aeroref_t265ref = None
         self.h_t265body_aerobody = None
 
-        self.set_tilt_offset(self.conf.pose.tilt_deg)
+        self.set_tilt_offset(self.conf.realsense.pose.tilt_deg)
 
     def wait_for_frame(self) -> data_types.Pose:
         return super().wait_for_frame()
@@ -301,3 +307,89 @@ class PosePipeline(RealsensePipeline):
         Convert T265 translation frame to aero NED translation
         """
         return self.h_aeroref_t265ref.apply(pos)
+
+
+class RealsenseRunner(startup.Startup):
+    def __init__(
+        self,
+        realsense_object: RealsensePipeline,
+        process_name="realsense_generic",
+        kwargs={},
+    ):
+        super().__init__(process_name)
+        self._realsense = realsense_object.__new__(realsense_object)
+        self._realsense.__init__(**kwargs)
+
+    def module_startup(self):
+        self._realsense.open_connection()
+        try:
+            while self.module_running:
+                # Some internal loop that has to be run
+                self._realsense.wait_for_frame()
+                time.sleep(1)
+
+        except Exception as err:
+            # Log exception
+            print(err)
+
+    def module_shutdown(self):
+        self._realsense.close_connection()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Launch Realsense Modules")
+    parser.add_argument(
+        "-o",
+        "-O",
+        "--option",
+        type=str,
+        help="Realsense stream type to launch",
+        required=True,
+    )
+    parser.add_argument(
+        "-c",
+        "-C",
+        "--config",
+        type=str,
+        required=False,
+        default=None,
+        help="Configuration file",
+    )
+    parser.add_argument(
+        "-d",
+        "-D",
+        "--debug",
+        type=bool,
+        required=False,
+        default=False,
+        help="Enable debug output",
+    )
+    args = parser.parse_args()
+    object_arguments = {}
+
+    if args.config is not None:
+        object_arguments["config_file"] = args.config
+
+    if args.config is not None:
+        print("Enable Debug")
+
+    if args.option == "depth":
+        PNAME = "realsense_depth"
+        PTYPE = DepthPipeline
+
+    elif args.option == "pose":
+        PNAME = "realsense_pose"
+        PTYPE = PosePipeline
+
+    elif args.option == "color":
+        PNAME = "realsense_color"
+        PTYPE = ColorPipeline
+
+    else:
+        raise RuntimeError("Unknowm option argument `{}`".format(args.option))
+
+    runner = RealsenseRunner(
+        realsense_object=PTYPE, process_name=PNAME, kwargs=object_arguments,
+    )
+
+    runner.run()
