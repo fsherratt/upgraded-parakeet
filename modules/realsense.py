@@ -1,22 +1,23 @@
 """
 Realsense stream connection modules - abstracts the pyrealsense API
 """
-import time
 import argparse
+import time
 
+import cv2
 import numpy as np
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
-from modules import data_types, load_config
-from modules import startup
+from modules import data_types, load_config, startup
 
 
 class RealsensePipeline:
     """
     Parent class for all realsense stream classes
     """
-    def __init__(self, config_file=None):
+
+    def __init__(self, config_file=None, debug=False):
         """
         Declare all the constants, tunable variables are public
         """
@@ -24,6 +25,7 @@ class RealsensePipeline:
         self._pipe = None
         self._object_name = 'Untitled'
 
+        self.debug = debug
         self.conf = load_config.from_file(config_file)
 
     def __enter__(self):
@@ -135,12 +137,14 @@ class RealsensePipeline:
         """
         print(err)
 
+
 class DepthPipeline(RealsensePipeline):
     """
     D435 depth stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # private
         self._object_name = self.conf.realsense.depth.object_name
@@ -149,7 +153,11 @@ class DepthPipeline(RealsensePipeline):
         self._fov = (0, 0)
 
     def wait_for_frame(self) -> data_types.Depth:
-        return super().wait_for_frame()
+        frame = super().wait_for_frame()
+
+        self._debug_plot(frame)
+
+        return frame
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
@@ -196,12 +204,24 @@ class DepthPipeline(RealsensePipeline):
 
         self._fov = rs.rs2_fov(intrin)
 
+    def _debug_plot(self, frame):
+        if self.debug:
+            depth = frame.depth * frame.intrin.scale
+            depth = cv2.applyColorMap(
+                cv2.convertScaleAbs(depth, alpha=75), cv2.COLORMAP_JET
+            )
+
+            cv2.imshow("depth", depth)
+            cv2.waitKey(1)
+
+
 class ColorPipeline(RealsensePipeline):
     """
     D435 RGB color stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # private
         self._object_name = self.conf.realsense.color.object_name
@@ -228,12 +248,14 @@ class ColorPipeline(RealsensePipeline):
 
         return data_types.Color(time.time(), image)
 
+
 class PosePipeline(RealsensePipeline):
     """
     T265 pose stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # Private
         self._object_name = self.conf.realsense.pose.object_name
@@ -310,11 +332,15 @@ class PosePipeline(RealsensePipeline):
 
 
 class RealsenseRunner(startup.Startup):
+    """
+    Setup and run class for realsense objects
+    """
+
     def __init__(
         self,
         realsense_object: RealsensePipeline,
+        kwargs,
         process_name="realsense_generic",
-        kwargs={},
     ):
         super().__init__(process_name)
         self._realsense = realsense_object.__new__(realsense_object)
@@ -322,15 +348,10 @@ class RealsenseRunner(startup.Startup):
 
     def module_startup(self):
         self._realsense.open_connection()
-        try:
-            while self.module_running:
-                # Some internal loop that has to be run
-                self._realsense.wait_for_frame()
-                time.sleep(1)
 
-        except Exception as err:
-            # Log exception
-            print(err)
+    def module_loop(self):
+        # Pass frame to rabbit mq
+        self._realsense.wait_for_frame()
 
     def module_shutdown(self):
         self._realsense.close_connection()
@@ -341,10 +362,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o",
         "-O",
-        "--option",
+        "--options",
         type=str,
-        help="Realsense stream type to launch",
+        nargs="+",
         required=True,
+        help="Realsense stream type to launch",
     )
     parser.add_argument(
         "-c",
@@ -359,34 +381,46 @@ if __name__ == "__main__":
         "-d",
         "-D",
         "--debug",
-        type=bool,
+        action="store_true",
         required=False,
         default=False,
         help="Enable debug output",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-pn",
+        "-PN",
+        "--process_name",
+        type=str,
+        default=None,
+        required=False,
+        help="Process heartbeat friendly name",
+    )
+    args = parser.parse_known_args()[0]
     object_arguments = {}
 
-    if args.config is not None:
-        object_arguments["config_file"] = args.config
-
-    if args.config is not None:
-        print("Enable Debug")
-
-    if args.option == "depth":
+    if args.options[0] == "depth":
         PNAME = "realsense_depth"
         PTYPE = DepthPipeline
 
-    elif args.option == "pose":
+    elif args.options[0] == "pose":
         PNAME = "realsense_pose"
         PTYPE = PosePipeline
 
-    elif args.option == "color":
+    elif args.options[0] == "color":
         PNAME = "realsense_color"
         PTYPE = ColorPipeline
 
     else:
         raise RuntimeError("Unknowm option argument `{}`".format(args.option))
+
+    if args.config is not None:
+        object_arguments["config_file"] = args.config
+
+    if args.debug is not None:
+        object_arguments["debug"] = args.debug
+
+    if args.process_name is not None:
+        PNAME = args.process_name
 
     runner = RealsenseRunner(
         realsense_object=PTYPE, process_name=PNAME, kwargs=object_arguments,
