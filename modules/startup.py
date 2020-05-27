@@ -23,12 +23,19 @@ class Startup:
         self.module_shutdown()
 
     def run(self):
-        self.main_thread = threading.Thread(target=self.module_startup, name='main_thread')
+        self.module_startup()
+        self.main_thread = threading.Thread(target=self._main_loop, name="main_thread")
         self.main_thread.start()
 
         # Setup close listener
 
         self.health_loop()
+
+    def module_loop(self):
+        """
+        Module main loop
+        """
+        assert NotImplementedError
 
     def module_startup(self):
         """
@@ -47,6 +54,10 @@ class Startup:
         # This could be a daemon thread that closes when the process finishes?
         self._stop_health_loop()
 
+    def _main_loop(self):
+        while self.module_running:
+            self.module_loop()
+
     def _stop_health_loop(self):
         self.module_running = False
         self.health_loop_delay_event.set()
@@ -54,7 +65,7 @@ class Startup:
     def health_loop(self):
         while self.module_running:
             if not self.main_thread.is_alive():
-                print('Oh No!!!! Bad things!')
+                print("Oh No!!!! Bad things!")
                 # log main thread closed and shutdown process
                 self.stop_callback()
                 continue
@@ -78,33 +89,37 @@ class Startup:
         threads = set(self.active_threads) - set(thread_list)
 
         for thread in threads:
-            #TODO: add logging mechanism
-            print('Thread {} closed'.format(thread.name))
+            # TODO: add logging mechanism
+            print("Thread {} closed".format(thread.name))
 
     def _log_thread_started(self, thread_list: list):
         threads = set(thread_list) - set(self.active_threads)
 
         for thread in threads:
-            #TODO: add logging mechanism
-            print('Thread {} created'.format(thread.name))
+            # TODO: add logging mechanism
+            print("Thread {} created".format(thread.name))
 
     def _send_heartbeat(self):
-        heartbeat = data_types.ProcessHeartbeat(time.time(),
-                                                self.process_name,
-                                                threading.active_count())
-        #TODO: add publisher mechanism
+        heartbeat = data_types.ProcessHeartbeat(
+            timestamp=time.time(),
+            process_name=self.process_name,
+            process_alive=self.main_thread.is_alive(),
+            thread_count=threading.active_count(),
+        )
+        # TODO: add publisher mechanism
         print(heartbeat)
+
 
 class TestStartup(Startup):
     def start(self):
         def test_func():
-            print('running')
+            print("running")
             time.sleep(3)
 
         for i in range(10):
-            new_thread = threading.Thread(target=test_func,
-                                          name='thread_{}'.format(i),
-                                          daemon=True)
+            new_thread = threading.Thread(
+                target=test_func, name="thread_{}".format(i), daemon=True
+            )
 
             new_thread.start()
             time.sleep(0.5)
