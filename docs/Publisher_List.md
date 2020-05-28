@@ -3,6 +3,7 @@
 ## Table of Contents
 - [Realsense](#realsense)
 - [Map](#map)
+- [Launch](#launch)
 
 ## <a name="realsense"></a>Realsense
 
@@ -39,3 +40,17 @@
 - timestamp (float32)
 - voxels: (float32)
 - count: (uint16)
+
+## <a name="map"></a>Launch
+### <a name="procHeart"></a>ProcessHeartbeat
+    timestamp: float
+    process_name: str
+    process_alive: bool
+    thread_count: int
+
+
+### <a name="startItem"></a>StartupItem
+    module: str
+    config_file: str
+    process_name: str
+    debug: bool
