@@ -17,7 +17,11 @@ class Startup:
         self.process_close_delay = 1
 
     def __enter__(self):
+        """
+        With functionality can be used to run without health monitoring
+        """
         self.module_startup()
+        self._main_loop()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.module_shutdown()
