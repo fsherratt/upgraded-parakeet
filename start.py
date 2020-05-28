@@ -1,100 +1,149 @@
 #!/usr/bin/env python3
 """
-Startup modules
+Progrmatically launch modules
 """
 import argparse
 import subprocess
-import time
 
 from modules import data_types, load_config
 
 # Add to the launch list any modules that can be run
 launch_list = {
-    # TAG: module startup code
+    # TAG: module + startup commands
     "rs_depth": ["modules.realsense", "-o", "depth"],
-    "rs_pose": "modules.realsense -o pose",
-    "rs_color": "modules.realsense -o color",
-    "map_predepth": "modules.map_preprocess -o depth",
+    "rs_pose": ["modules.realsense", "-o", "pose"],
+    "rs_color": ["modules.realsense", "-o", "color"],
+    "map_predepth": ["modules.map_preprocess", "-o", "depth"],
 }
-
 # ---DO NOT MODIFY BELOW THIS LINE---
-startup_list = []
-
-parser = argparse.ArgumentParser(description="Startup module(s)")
-parser.add_argument(
-    "-m",
-    "-M",
-    "--module",
-    action="append",
-    nargs="+",
-    default=None,
-    help="[Module Name] [Debug] [Config File] [Process Name]",
-)
-parser.add_argument(
-    "-c",
-    "-C",
-    "--config_file",
-    type=str,
-    default=None,
-    help="Startup list config file",
-)
-args = parser.parse_known_args()[0]
 
 
-# Parse module list from config file
-if args.config_file is not None:
-    conf = load_config.from_file(args.config_file, use_cli_input=False)
+def decode_startup_yaml(config_file: str, current_startup_list=None) -> list:
+    """
+    """
+    if current_startup_list is None:
+        current_startup_list = []
+
+    conf = load_config.from_file(config_file, use_cli_input=False)
 
     for _ in conf.startup_list:
-        startup_list.append(load_config.conf_to_named_tuple(data_types.StartupItem, _))
+        current_startup_list.append(
+            load_config.conf_to_named_tuple(data_types.StartupItem, _)
+        )
+
+    return current_startup_list
 
 
-# Parse module list from CLI
-if args.module:
-    for _ in args.module:
-        if len(_) == 1:  # Only modules specified
-            new_item = data_types.StartupItem(
-                module=_[0], debug=False, config_file=None, process_name=None
-            )
+def decode_startup_cli(modules: list, current_startup_list=None) -> list:
+    """
+    """
+    if current_startup_list is None:
+        current_startup_list = []
 
-        elif len(_) == 2:  # Debug specified
-            new_item = data_types.StartupItem(
-                module=_[0], debug=_[1], config_file=_[2], process_name=None
-            )
-        elif len(_) == 3:  # Config file specified
-            new_item = data_types.StartupItem(
-                module=_[0], debug=_[1], config_file=_[2], process_name=None
-            )
-
-        elif len(_) == 4:  # Process name specified
-            new_item = data_types.StartupItem(
-                module=_[0], debug=_[1], config_file=_[2], process_name=_[3]
-            )
-
+    for _ in modules:
+        new_item = decode_startup_list(_)
         startup_list.append(new_item)
 
 
-# Launch modules
-for _ in startup_list:
+def decode_startup_list(module: list) -> data_types.StartupItem:
+    """
+    """
+    item = None
+    if len(module) == 1:  # Only modules specified
+        item = data_types.StartupItem(
+            module=module[0], debug=False, config_file=None, process_name=None
+        )
+    elif len(module) == 2:  # Debug specified
+        item = data_types.StartupItem(
+            module=module[0], debug=module[1], config_file=None, process_name=None
+        )
+    elif len(module) == 3:  # Config file specified
+        item = data_types.StartupItem(
+            module=module[0], debug=module[1], config_file=module[2], process_name=None
+        )
+    elif len(module) == 4:  # Process name specified
+        item = data_types.StartupItem(
+            module=module[0],
+            debug=module[1],
+            config_file=module[2],
+            process_name=module[3],
+        )
+
+    return item
+
+
+def launch_process(launch_item: data_types.StartupItem) -> subprocess.Popen:
+    """
+    """
     try:
-        item = launch_list.get(_.module)
+        launch_cmd = launch_list[launch_item.module]
     except KeyError:
-        print("Oh No")
+        print("Launch process `{}` not known".format(launch_item.module))
+        return None
 
     argslist = ["python3", "-m"]
-    argslist.extend(launch_list[_.module])
+    argslist.extend(launch_cmd)
 
-    if _.config_file is not None:
-        argslist.extend(["-c", _.config_file])
+    if launch_item.config_file is not None:
+        argslist.extend(["-c", launch_item.config_file])
 
-    if _.debug:
+    if launch_item.debug:
         argslist.extend(["-d"])
 
-    if _.process_name is not None:
-        argslist.extend(["-pn", _.process_name])
+    if launch_item.process_name is not None:
+        argslist.extend(["-pn", launch_item.process_name])
 
-    p = subprocess.Popen(args=argslist, start_new_session=True)
+    return subprocess.Popen(args=argslist, start_new_session=True)
 
-    print("New process created\tTAG:{}\tPID:{}".format(_.module, p.pid))
 
-time.sleep(10)
+def parse_cli() -> argparse.Namespace:
+    """
+    """
+    parser = argparse.ArgumentParser(description="Startup module(s)")
+    parser.add_argument(
+        "-m",
+        "-M",
+        "--module",
+        action="append",
+        nargs="+",
+        default=None,
+        help="[Module Name] [Debug] [Config File] [Process Name]",
+    )
+    parser.add_argument(
+        "-c",
+        "-C",
+        "--config_file",
+        type=str,
+        default=None,
+        help="Startup list config file",
+    )
+    return parser.parse_known_args()[0]
+
+
+if __name__ == "__main__":
+    startup_list = []
+    args = parse_cli()
+
+    # Parse module list from CLI
+    if args.module:
+        decode_startup_cli(args.module)
+
+    # Parse module list from config file
+    if args.config_file is not None:
+        startup_list = decode_startup_yaml(args.config_file, startup_list)
+
+    # Launch modules
+    for _ in startup_list:
+        p = launch_process(_)
+
+        if p is None:
+            continue
+
+        print("New process created\tTAG:{}\tPID:{}".format(_.module, p.pid))
+
+        try:
+            p.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+        p.terminate()

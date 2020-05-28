@@ -1,15 +1,34 @@
 ---
 # Template must match the data_types StartupItem definition
 templates: &node
-    module: ''
+    module: null
     config_file: null
-    process_name: ''
+    process_name: null
     debug: false
 
 startup_list:
-     -
+    -
+        <<: *node
+        module: 'rs_pose'
+
+    -
         <<: *node
         module: 'rs_depth'
         process_name: 'realsense_depth'
+        debug: true
+
+    -
+        <<: *node
+        module: 'rs_color'
+        debug: true
+
+    -
+        <<: *node
+        module: 'rs_depth'
+        debug: true
+
+    -
+        <<: *node
+        module: 'rs_depth'
         debug: true
 ...

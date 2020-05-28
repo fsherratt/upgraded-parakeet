@@ -27,7 +27,7 @@ class Startup:
         self.main_thread = threading.Thread(target=self._main_loop, name="main_thread")
         self.main_thread.start()
 
-        # Setup close listener
+        # TODO: Setup close listener
 
         self.health_loop()
 
@@ -54,6 +54,7 @@ class Startup:
         # This could be a daemon thread that closes when the process finishes?
         self._stop_health_loop()
 
+    # TODO: Exception handling decorator
     def _main_loop(self):
         while self.module_running:
             self.module_loop()
@@ -62,11 +63,12 @@ class Startup:
         self.module_running = False
         self.health_loop_delay_event.set()
 
+    # TODO: Exception handling decorator
     def health_loop(self):
         while self.module_running:
             if not self.main_thread.is_alive():
                 print("Oh No!!!! Bad things!")
-                # log main thread closed and shutdown process
+                # TODO: Log main thread closed and shutdown process
                 self.stop_callback()
                 continue
 
@@ -108,25 +110,3 @@ class Startup:
         )
         # TODO: add publisher mechanism
         print(heartbeat)
-
-
-class TestStartup(Startup):
-    def start(self):
-        def test_func():
-            print("running")
-            time.sleep(3)
-
-        for i in range(10):
-            new_thread = threading.Thread(
-                target=test_func, name="thread_{}".format(i), daemon=True
-            )
-
-            new_thread.start()
-            time.sleep(0.5)
-
-        time.sleep(10)
-
-        self.stop_callback()
-
-    def stop(self):
-        pass
