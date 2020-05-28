@@ -3,6 +3,7 @@
 Progrmatically launch modules
 """
 import argparse
+import select
 import subprocess
 
 from modules import data_types, load_config
@@ -93,7 +94,9 @@ def launch_process(launch_item: data_types.StartupItem) -> subprocess.Popen:
     if launch_item.process_name is not None:
         argslist.extend(["-pn", launch_item.process_name])
 
-    return subprocess.Popen(args=argslist, start_new_session=True)
+    return subprocess.Popen(
+        args=argslist, stderr=subprocess.PIPE, start_new_session=True
+    )
 
 
 def parse_cli() -> argparse.Namespace:
@@ -132,6 +135,7 @@ if __name__ == "__main__":
     if args.config_file is not None:
         startup_list = decode_startup_yaml(args.config_file, startup_list)
 
+    processes = []
     # Launch modules
     for _ in startup_list:
         p = launch_process(_)
@@ -139,11 +143,23 @@ if __name__ == "__main__":
         if p is None:
             continue
 
+        processes.append(p)
         print("New process created\tTAG:{}\tPID:{}".format(_.module, p.pid))
 
-        try:
-            p.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
+    while True:
+        err_streams = [p.stderr for p in processes]
+        rstreams, _, _ = select.select(err_streams, [], [], 1)
 
-        p.terminate()
+        for stream in rstreams:
+            error_string = stream.read()
+
+            if error_string:
+                # TODO: Log errors produced of stderr
+                print(error_string)
+
+        for p in processes:
+            if p.poll() is not None:
+                processes.remove(p)
+
+        if not processes:
+            break
