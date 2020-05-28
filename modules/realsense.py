@@ -97,6 +97,9 @@ class RealsensePipeline:
         # Post Process
         data = self._post_process(data)
 
+        if self.debug:
+            self._debug_output(data)
+
         # End
         return data
 
@@ -137,6 +140,9 @@ class RealsensePipeline:
         """
         print(err)
 
+    def _debug_output(self, data):
+        raise NotImplementedError
+
 
 class DepthPipeline(RealsensePipeline):
     """
@@ -153,11 +159,7 @@ class DepthPipeline(RealsensePipeline):
         self._fov = (0, 0)
 
     def wait_for_frame(self) -> data_types.Depth:
-        frame = super().wait_for_frame()
-
-        self._debug_plot(frame)
-
-        return frame
+        return super().wait_for_frame()
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
@@ -204,15 +206,14 @@ class DepthPipeline(RealsensePipeline):
 
         self._fov = rs.rs2_fov(intrin)
 
-    def _debug_plot(self, frame):
-        if self.debug:
-            depth = frame.depth * frame.intrin.scale
-            depth = cv2.applyColorMap(
-                cv2.convertScaleAbs(depth, alpha=75), cv2.COLORMAP_JET
-            )
+    def _debug_output(self, frame: data_types.Depth):
+        depth = frame.depth * frame.intrin.scale
+        depth = cv2.applyColorMap(
+            cv2.convertScaleAbs(depth, alpha=75), cv2.COLORMAP_JET
+        )
 
-            cv2.imshow("depth", depth)
-            cv2.waitKey(1)
+        cv2.imshow("realsense_depth", depth)
+        cv2.waitKey(1)
 
 
 class ColorPipeline(RealsensePipeline):
@@ -247,6 +248,10 @@ class ColorPipeline(RealsensePipeline):
         image = np.asarray(data, dtype=np.uint8)
 
         return data_types.Color(time.time(), image)
+
+    def _debug_output(self, frame: data_types.Color):
+        cv2.imshow("realsense_color", frame.image)
+        cv2.waitKey(1)
 
 
 class PosePipeline(RealsensePipeline):
@@ -329,6 +334,13 @@ class PosePipeline(RealsensePipeline):
         Convert T265 translation frame to aero NED translation
         """
         return self.h_aeroref_t265ref.apply(pos)
+
+    def _debug_output(self, pose: data_types.Pose):
+        print(
+            "Pos:{}\tQuat:{}\tConf:{}".format(
+                pose.translation, pose.quaternion, pose.conf
+            )
+        )
 
 
 class RealsenseRunner(startup.Startup):
