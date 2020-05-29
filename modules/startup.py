@@ -16,6 +16,8 @@ class Startup:
 
         self.process_close_delay = 1
 
+        self.health_loop_delay_event.is_set
+
     def __enter__(self):
         """
         With functionality can be used to run without health monitoring
@@ -98,12 +100,16 @@ class Startup:
             # TODO: add logging mechanism
             print("Thread {} closed".format(thread.name))
 
+        return threads
+
     def _log_thread_started(self, thread_list: list):
         threads = set(thread_list) - set(self.active_threads)
 
         for thread in threads:
             # TODO: add logging mechanism
             print("Thread {} created".format(thread.name))
+
+        return threads
 
     def _send_heartbeat(self):
         heartbeat = data_types.ProcessHeartbeat(

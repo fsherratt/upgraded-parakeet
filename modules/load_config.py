@@ -21,5 +21,5 @@ def from_file(config_file=None, use_cli_input=True) -> DictConfig:
     return conf
 
 
-def conf_to_named_tuple(dtype_class: NamedTuple, kwargs: DictConfig):
+def conf_to_named_tuple(dtype_class: NamedTuple, kwargs: DictConfig) -> NamedTuple:
     return dtype_class.__new__(dtype_class, **kwargs)
