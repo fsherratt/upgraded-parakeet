@@ -71,7 +71,7 @@ def parse_startup_cli(modules: list, current_startup_list=None) -> list:
 
     for module in modules:
         if len(module) > 1:
-            debug = bool(module[1] == "true")
+            debug = bool(module[1] == "true" or module[1] == "True")
 
         if len(module) == 1:  # Only modules specified
             new_item = data_types.StartupItem(
