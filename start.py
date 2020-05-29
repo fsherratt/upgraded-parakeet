@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Progrmatically launch modules
+Programmatically launch modules
 """
 import argparse
 import select
 import subprocess
+import signal
 
 from modules import data_types, load_config
 
@@ -15,7 +16,6 @@ launch_list = {
     "rs_depth": ["modules.realsense", "-o", "depth"],
     "rs_pose": ["modules.realsense", "-o", "pose"],
     "rs_color": ["modules.realsense", "-o", "color"],
-    "map_predepth": ["modules.map_preprocess", "-o", "depth"],
 }
 # ---DO NOT MODIFY BELOW THIS LINE---
 
@@ -176,6 +176,11 @@ def monitor_stderr(process_list: list, blocking_timeout=1):
             print(error_string.decode("utf-8"))
 
 
+def kill_processes(process_list: list):
+    for process in process_list:
+        process.terminate()
+
+
 if __name__ == "__main__":
     startup_list = []
     args = parse_cli()
@@ -192,7 +197,12 @@ if __name__ == "__main__":
 
     # Monitor until all processes are finish
     while processes:
-        processes = process_is_alive(processes)
-        monitor_stderr(processes)
+        try:
+            processes = process_is_alive(processes)
+            monitor_stderr(processes)
+
+        except KeyboardInterrupt:
+            print("Keyboard interrupy: Stopping processes")
+            kill_processes(processes)
 
     print("Closing: All processes finished")
