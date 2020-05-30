@@ -151,12 +151,15 @@ def launch_processes(startup_items: list) -> list:
 
 def process_is_alive(process_list: list) -> list:
     """
-    Monitor the operating state of a list of Popen ojects, remove if closed
+    Filter Popen oject list and remove closed processes
     """
-    for process in process_list:
-        if process.poll() is not None:
-            print("Process PID:{} has closed".format(process.pid))
-            process_list.remove(process)
+    dead_processes = list(
+        filter(lambda process: process.poll() is not None, process_list)
+    )
+
+    for process in dead_processes:
+        print("Process PID:{} exited with code:{}".format(process.pid, process.poll()))
+        process_list.remove(process)
 
     return process_list
 
@@ -202,7 +205,7 @@ if __name__ == "__main__":
             monitor_stderr(processes)
 
         except KeyboardInterrupt:
-            print("Keyboard interrupy: Stopping processes")
+            print("Start.py: Keyboard interrupt - stopping all processes")
             kill_processes(processes)
 
-    print("Closing: All processes finished")
+    print("Start.py: Closing - All processes finished")
