@@ -140,14 +140,11 @@ def launch_process(launch_item: data_types.StartupItem) -> subprocess.Popen:
     """
     Launch a subprocess from the provided StartupItem definition
     """
-    try:
-        launch_cmd = launch_list[launch_item.module]
-    except KeyError:
-        print("Launch process `{}` not known".format(launch_item.module))
+    if not check_if_tag_known(launch_item.module):
         return None
 
     argslist = ["python3", "-m"]
-    argslist.extend(launch_cmd)
+    argslist.extend(launch_list[launch_item.module])
 
     if launch_item.config_file is not None:
         argslist.extend(["-c", launch_item.config_file])

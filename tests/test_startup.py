@@ -1,9 +1,7 @@
-from context import modules
+from threading import Thread
 from unittest import TestCase, mock
 
-from modules import startup
-
-from threading import Thread
+from modules import startup  # pylint: disable=import-error
 
 
 class TestStartup(TestCase):
