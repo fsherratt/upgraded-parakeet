@@ -48,7 +48,7 @@ class MapDefinition(NamedTuple):
 
 class ProcessHeartbeat(NamedTuple):
     timestamp: float
-    process_name: str
+    process_tag: str
     process_alive: bool
     thread_count: int
 
@@ -56,5 +56,5 @@ class ProcessHeartbeat(NamedTuple):
 class StartupItem(NamedTuple):
     module: str
     config_file: str
-    process_name: str
+    process_tag: str
     debug: bool

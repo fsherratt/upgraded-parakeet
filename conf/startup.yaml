@@ -3,7 +3,7 @@
 templates: &node
     module: null
     config_file: null
-    process_name: null
+    process_tag: null
     debug: false
 
 startup_list:
@@ -21,7 +21,7 @@ startup_list:
         <<: *node
         module: 'rs_color'
         debug: true
-
+        process_tag: 'custom_tag'
     -
         <<: *node
         module: 'rs_depth'

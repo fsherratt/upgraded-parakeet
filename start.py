@@ -5,7 +5,6 @@ Programmatically launch modules
 import argparse
 import select
 import subprocess
-import signal
 
 from modules import data_types, load_config
 
@@ -13,9 +12,9 @@ from modules import data_types, load_config
 # Add to the launch list any modules that can be run
 # TAG: module + startup commands
 launch_list = {
-    "rs_depth": ["modules.realsense", "-o", "depth"],
-    "rs_pose": ["modules.realsense", "-o", "pose"],
-    "rs_color": ["modules.realsense", "-o", "color"],
+    "rs_depth": ["modules.realsense", "-o", "rs_depth"],
+    "rs_pose": ["modules.realsense", "-o", "rs_pose"],
+    "rs_color": ["modules.realsense", "-o", "rs_color"],
 }
 # ---DO NOT MODIFY BELOW THIS LINE---
 
@@ -42,7 +41,32 @@ def parse_cli() -> argparse.Namespace:
         default=None,
         help="Startup list config file",
     )
+    parser.add_argument(
+        "--except_capture",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Enable subprocess exception capture",
+    )
+    parser.add_argument(
+        "--wait_on_process",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Wait for processes to close before exiting",
+    )
     return parser.parse_known_args()[0]
+
+
+def check_if_tag_known(tag: str) -> bool:
+    """
+    Check if the tag is in the launch dictionary
+    """
+    if tag in launch_list.keys():
+        return True
+    else:
+        print("TAG:{} not known".format(tag))
+        return False
 
 
 def parse_startup_yaml(config_file: str, current_startup_list=None) -> list:
@@ -55,6 +79,9 @@ def parse_startup_yaml(config_file: str, current_startup_list=None) -> list:
     conf = load_config.from_file(config_file, use_cli_input=False)
 
     for _ in conf.startup_list:
+        if not check_if_tag_known(_.module):
+            continue
+
         current_startup_list.append(
             load_config.conf_to_named_tuple(data_types.StartupItem, _)
         )
@@ -70,27 +97,36 @@ def parse_startup_cli(modules: list, current_startup_list=None) -> list:
         current_startup_list = []
 
     for module in modules:
+        if not module:
+            continue
+
+        if not check_if_tag_known(module[0]):
+            continue
+
         if len(module) > 1:
             debug = bool(module[1] == "true" or module[1] == "True")
 
         if len(module) == 1:  # Only modules specified
             new_item = data_types.StartupItem(
-                module=module[0], debug=False, config_file=None, process_name=None
+                module=module[0], debug=False, config_file=None, process_tag=module[0]
             )
         elif len(module) == 2:  # Debug specified
             new_item = data_types.StartupItem(
-                module=module[0], debug=debug, config_file=None, process_name=None
+                module=module[0], debug=debug, config_file=None, process_tag=module[0]
             )
         elif len(module) == 3:  # Config file specified
             new_item = data_types.StartupItem(
-                module=module[0], debug=debug, config_file=module[2], process_name=None,
+                module=module[0],
+                debug=debug,
+                config_file=module[2],
+                process_tag=module[0],
             )
         elif len(module) == 4:  # Process name specified
             new_item = data_types.StartupItem(
                 module=module[0],
                 debug=debug,
                 config_file=module[2],
-                process_name=module[3],
+                process_tag=module[3],
             )
         else:
             continue
@@ -119,8 +155,8 @@ def launch_process(launch_item: data_types.StartupItem) -> subprocess.Popen:
     if launch_item.debug:
         argslist.extend(["-d"])
 
-    if launch_item.process_name is not None:
-        argslist.extend(["-pn", launch_item.process_name])
+    if launch_item.process_tag is not None:
+        argslist.extend(["-pt", launch_item.process_tag])
 
     return subprocess.Popen(
         args=argslist, stderr=subprocess.PIPE, start_new_session=True
@@ -169,17 +205,20 @@ def monitor_stderr(process_list: list, blocking_timeout=1):
     Monitor the standard error stream of a list of Popen ojects
     """
     err_streams = [p.stderr for p in process_list]
-    rstreams, _, _ = select.select(err_streams, [], [], blocking_timeout)
+    r_streams, _, _ = select.select(err_streams, [], [], blocking_timeout)
 
-    for stream in rstreams:
-        error_string = stream.read()
+    for stream in r_streams:
+        error_string = stream.read().decode("utf-8")
 
         if error_string:
             # TODO: Log output of subprocess stderr
-            print(error_string.decode("utf-8"))
+            print(error_string)
 
 
 def kill_processes(process_list: list):
+    """
+    Send SIGTERM signal to all running process
+    """
     for process in process_list:
         process.terminate()
 
@@ -199,10 +238,12 @@ if __name__ == "__main__":
     processes = launch_processes(startup_list)
 
     # Monitor until all processes are finish
-    while processes:
+    while processes and args.wait_on_process:
         try:
             processes = process_is_alive(processes)
-            monitor_stderr(processes)
+
+            if args.except_capture:
+                monitor_stderr(processes)
 
         except KeyboardInterrupt:
             print("Start.py: Keyboard interrupt - stopping all processes")
