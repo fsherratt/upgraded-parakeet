@@ -26,11 +26,8 @@ class TestStartup(TestCase):
 
         self.assertTrue(mock_thread.call_args[1]["target"] == self.start_obj._main_loop)
 
-    @mock.patch("modules.startup.Startup.module_shutdown")
-    def test_close_callback(self, mock_mod_shut):
+    def test_close_callback(self):
         self.start_obj.stop_callback()
-
-        mock_mod_shut.assert_called()
 
         self.assertFalse(self.start_obj.module_running)
         self.assertTrue(self.start_obj.health_loop_delay_event.is_set())
