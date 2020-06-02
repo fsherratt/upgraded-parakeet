@@ -41,13 +41,13 @@ class TestLoadConfig(TestCase):
         self.assertEqual(conf.test, self.test_value)
 
 
-class TestNamedTuple(NamedTuple):
+class DummyNamedTuple(NamedTuple):
     var_1: str
 
 
 class TestConfToNameTuple(TestCase):
     def test(self):
         TestConfig = {"var_1": "test"}
-        rtn = conf_to_named_tuple(TestNamedTuple, TestConfig)
+        rtn = conf_to_named_tuple(DummyNamedTuple, TestConfig)
 
         self.assertEqual(rtn.var_1, TestConfig["var_1"])
