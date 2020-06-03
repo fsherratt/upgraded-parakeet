@@ -58,3 +58,4 @@ class StartupItem(NamedTuple):
     config_file: str
     process_tag: str
     debug: bool
+    health_monitor: bool

@@ -17,10 +17,10 @@ The `start.py` script allows modules to be started and monitored. Modules implem
 
 ### start.py Command
 The following commands can be used with the start.py
-|Argument| Description |
-|:---|:---|
-|`-c`, `-C`, `--config_file` | Startup config file address |
-|`-m`, `-M`, `--module` | Module Tag \[Debug \[Config file \[Process name\]\]\] |
+|Argument| Description | Required (y/N) |
+|:---|:---|:---:|
+|`-c`, `-C`, `--config-file` | Startup config file address | N |
+|`-m`, `-M`, `--module` | Module Tag \[Debug \[Config file \[Process name\]\]\] | N |
 
 The module argument must be specified for each module
 
@@ -43,18 +43,19 @@ Below is a list of availabe tags and the module they are associated with.
 
 ### <a name="module_cmd"></a>Module Commands
 Modules can be launched directly using the following arguments
-|Argument| Description |
-|:---|:---|
-| `-c`, `-C`, `--config_file` | Configuration file address |
-| `-d`, `-D`, `--debug` | Enable debuging output |
-| `-pn`, `-PN`, `--process_name` | Process friendly name |
+|Argument| Description | Required (y/N) |
+|:---|:---|:---:|
+| `-c`, `-C`, `--config-file` | Configuration file path | N |
+| `-d`, `-D`, `--debug` | Enable debuging output | N |
+| `-pt`, `-PT`, `--process-tag` | Unique process tag | N |
+| `-hm`, `-HM`, `--health-monitor` | Enable thread health monitoring | N |
 
 When launched like this the process std_err will not be captured automatically, this can useful when debugging code.
 
-Note it must be run as a python module using the `-m` python argument, see below.
+Note it must be run as a python module using the `-m` python argument. The below line will run the modules.example module with the config file `conf/test.yaml` with a process identity tag `example_process`, debugging output enabled and the thread health monitor running.
 
 ```python
-python3 -m modules.example -c conf/test.yaml -D -pn example_process
+python3 -m modules.example -c conf/test.yaml -pt example_process -d -hm
 ```
 
 ## Startup Config File
@@ -117,7 +118,8 @@ The args return object contains the following elements
 |`args.option` | List of module specified launch arguments |
 |`args.config` | Config file |
 |`args.debug` | Enable/Disable debugging |
-|`args.process_name` | Frieldly process name |
+|`args.process_tag` | Unique process tag |
+|`args.health_monitor` | Enable health monitoring |
 
 ## The setup object
 Each module requires to have a child class of the `startup.Startup` class. This implements thread health monitoring and process heartbeats

@@ -36,20 +36,20 @@ def parse_cli() -> argparse.Namespace:
     parser.add_argument(
         "-c",
         "-C",
-        "--config_file",
+        "--config-file",
         type=str,
         default=None,
         help="Startup list config file",
     )
     parser.add_argument(
-        "--except_capture",
+        "--except-capture",
         action="store_true",
         required=False,
         default=False,
         help="Enable subprocess exception capture",
     )
     parser.add_argument(
-        "--wait_on_process",
+        "--wait-on-process",
         action="store_true",
         required=False,
         default=False,
@@ -154,6 +154,9 @@ def launch_process(launch_item: data_types.StartupItem) -> subprocess.Popen:
 
     if launch_item.process_tag is not None:
         argslist.extend(["-pt", launch_item.process_tag])
+
+    if launch_item.health_monitor:
+        argslist.extend(["-hm"])
 
     return subprocess.Popen(
         args=argslist, stderr=subprocess.PIPE, start_new_session=True

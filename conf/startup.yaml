@@ -5,6 +5,7 @@ templates: &node
     config_file: null
     process_tag: null
     debug: false
+    health_monitor: true
 
 startup_list:
     -
@@ -12,6 +13,7 @@ startup_list:
         module: 'rs_color'
         debug: true
         process_tag: 'custom_tag'
+        health_monitor: false
     -
         <<: *node
         module: 'rs_depth'

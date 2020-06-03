@@ -402,4 +402,4 @@ if __name__ == "__main__":
         realsense_object=PTYPE, process_tag=PTAG, kwargs=object_arguments,
     )
 
-    runner.run()
+    runner.run(health_monitoring=args.health_monitor)

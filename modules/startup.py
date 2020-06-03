@@ -41,17 +41,21 @@ class Startup:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.module_shutdown()
 
-    def run(self):
+    def run(self, health_monitoring=True):
         """
         Launch the encapsulated module on the main_thread
         """
-        self.module_startup()
-        self.main_thread = threading.Thread(target=self._main_loop, name="main_thread")
-        self.main_thread.start()
+        if health_monitoring:
+            self.main_thread = threading.Thread(
+                target=self._main_loop, name="main_thread"
+            )
+            self.main_thread.start()
 
-        # TODO: Setup close listener
+            # TODO: rabbit mq stop listener
 
-        self.health_loop()
+            self.health_loop()
+        else:
+            self._main_loop()
 
     def module_loop(self):
         """
@@ -80,6 +84,8 @@ class Startup:
 
     # TODO: Exception handling decorator
     def _main_loop(self):
+        self.module_startup()
+
         while self.module_running:
             self.module_loop()
 
@@ -181,10 +187,19 @@ class Startup:
         parser.add_argument(
             "-pt",
             "-PT",
-            "--process_tag",
+            "--process-tag",
             type=str,
             default=None,
             required=False,
             help="Process identification tag",
+        )
+        parser.add_argument(
+            "-hm",
+            "-HM",
+            "--health_monitor",
+            action="store_true",
+            required=False,
+            default=False,
+            help="Enable health monitoring thread",
         )
         return parser.parse_known_args()[0]
