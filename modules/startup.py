@@ -1,10 +1,13 @@
 """
 This module handles all startup classes
 """
+import argparse
+import signal
 import threading
 import time
-import argparse
+
 from modules import data_types
+
 
 # TODO: Add a listener for close rabbit mq that matcehs the process_tag variable
 class Startup:
@@ -13,15 +16,20 @@ class Startup:
     """
 
     def __init__(self, process_tag):
-        self.main_thread = None
         self.process_tag = process_tag
-        self.active_threads = threading.enumerate()
 
         self.module_running = True
-        self.health_loop_delay_event = threading.Event()
-        self.heartbeat_period = 0.5
 
+        self.heartbeat_period = 0.5
         self.process_close_delay = 1
+
+        self.main_thread = None
+
+        self.active_threads = threading.enumerate()
+        self.health_loop_delay_event = threading.Event()
+
+        signal.signal(signal.SIGTERM, handler=self.stop_callback)
+        signal.signal(signal.SIGINT, handler=self.stop_callback)
 
     def __enter__(self):
         """
@@ -87,10 +95,8 @@ class Startup:
         """
         while self.module_running:
             if not self.main_thread.is_alive():
-                print("Oh No!!!! Bad things!")
                 # TODO: Log main thread closed and shutdown process
                 self.stop_callback()
-                continue
 
             self.thread_health()
 
