@@ -2,32 +2,27 @@
 This module contains all classes related to preprocessing of point data to
 be added to the occupancy map
 """
-import time
-
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from modules import data_types, load_config
 from modules.async_message import AsyncMessageCallback
 
-
 class MapPreprocess:
     """
     This class takes a localised point cloud and prepares it to
     be added to the global occupancy map
     """
-    def __init__(self, config_file='conf/map.yaml'):
+    def __init__(self, map_def: data_types.MapDefinition, config_file='conf/map.yaml'):
         self.conf = load_config.from_file(config_file)
-        self.map_definition = load_config.conf_to_named_tuple(data_types.MapDefinition,
-                                                              self.conf.map.shape)
 
-        self.bins = None
+        self._map_shape = map_def
+
+        self._bins = None
         self._initialise_bin_delimitations()
 
         self.message_queue = AsyncMessageCallback(queue_size=1)
         self._pose_data = None
-
-        self.last_time = time.time()
 
     def depth_callback(self, data: data_types.Depth):
         """
@@ -79,17 +74,17 @@ class MapPreprocess:
         return (map_points, point_count)
 
     def _initialise_bin_delimitations(self):
-        x_bins = np.linspace(self.map_definition.x_min,
-                             self.map_definition.x_max,
-                             self.map_definition.x_divisions)
-        y_bins = np.linspace(self.map_definition.y_min,
-                             self.map_definition.y_max,
-                             self.map_definition.y_divisions)
-        z_bins = np.linspace(self.map_definition.z_min,
-                             self.map_definition.z_max,
-                             self.map_definition.z_divisions)
+        x_bins = np.linspace(self._map_shape.x_min,
+                             self._map_shape.x_max,
+                             self._map_shape.x_divisions)
+        y_bins = np.linspace(self._map_shape.y_min,
+                             self._map_shape.y_max,
+                             self._map_shape.y_divisions)
+        z_bins = np.linspace(self._map_shape.z_min,
+                             self._map_shape.z_max,
+                             self._map_shape.z_divisions)
 
-        self.bins = (x_bins, y_bins, z_bins)
+        self._bins = (x_bins, y_bins, z_bins)
 
     def _local_to_global(self, local_points, pose):
         """
@@ -108,11 +103,13 @@ class MapPreprocess:
         returns a Nx3 matrix of voxel coordinates and a vector 
         representing the number of hits in each voxel
         """
-        x_sort = np.digitize(points[:, 0], self.bins[0]) - 1
-        y_sort = np.digitize(points[:, 1], self.bins[1]) - 1
-        z_sort = np.digitize(points[:, 2], self.bins[2]) - 1
+        x_sort = np.digitize(points[:, 0], self._bins[0]) - 1
+        y_sort = np.digitize(points[:, 1], self._bins[1]) - 1
+        z_sort = np.digitize(points[:, 2], self._bins[2]) - 1
 
         voxels = np.column_stack((x_sort, y_sort, z_sort))
+        voxels[voxels < 0] = 0
+
         voxels = np.uint16(voxels)
 
         if self.conf.depth_preprocess.enable_compression:

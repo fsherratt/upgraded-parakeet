@@ -10,7 +10,11 @@ from modules.map_preprocess import DepthMapAdapter, MapPreprocess
 
 class TestMapPreprocess(TestCase):
     def setUp(self):
-        self.map_pre = MapPreprocess()
+        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
+                                           x_max=1, y_max=1, z_max=1,
+                                           x_divisions=10, y_divisions=10, 
+                                           z_divisions=10)
+        self.map_pre = MapPreprocess(map_def=map_def)
 
     def test_local_to_global(self):
         test_local_point = [1, 0, 0]
@@ -39,7 +43,7 @@ class TestMapPreprocess(TestCase):
         np.testing.assert_almost_equal(rtn, [1, 1, 0])
 
     def test_discritise_point_cloud(self):
-        map_shape = self.map_pre.map_definition
+        map_shape = self.map_pre._map_shape
         test_coord = np.asarray([[map_shape.x_min, map_shape.y_min, map_shape.z_min],
                                  [map_shape.x_max, map_shape.y_max, map_shape.z_max]])
 
@@ -75,7 +79,11 @@ class TestMapPreprocess(TestCase):
 
 class TestDepthAdapter(TestCase):
     def setUp(self):
-        self.map_pre = DepthMapAdapter()
+        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
+                                           x_max=1, y_max=1, z_max=1,
+                                           x_divisions=10, y_divisions=10, 
+                                           z_divisions=10)
+        self.map_pre = DepthMapAdapter(map_def=map_def)
 
     def test_scale_result(self):
         """
