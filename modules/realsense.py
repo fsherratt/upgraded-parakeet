@@ -385,7 +385,7 @@ if __name__ == "__main__":
         PTAG = args.options[0]
         PTYPE = modules[PTAG]
     except KeyError:
-        raise RuntimeError("Unknowm module options `-o {}`".format(args.option))
+        raise RuntimeError("Unknowm module options `-o {}`".format(args.options))
 
     object_arguments = {}
 
