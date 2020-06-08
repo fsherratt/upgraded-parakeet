@@ -11,18 +11,24 @@ This docuemnent contains instructions on how to setup development enviroment for
 - Microsoft Hyper-v must be disabled, see below
 - Install your preferred flavour of linux
 - Connect realsense cameras through USB passthrough
-- run `lsusb` and confirm an Intel devices shows up
+- Run `lsusb` and confirm an Intel devices shows up
 - Follow the instructions for setting up the dev enviroment
 
 ## Disable hyper-v
 Go to `Turn windows features on or off` and make sure `Hyper-V -> Hyper-V Platform -> Hyper-V Hypervisors` is deselected. Then restart your computer
 
 ## Connecting USB in VMWare
-- Make sure USB is set to 3.1
+- Make sure USB is set to 3.1. Then once the VM is turned on connect to the USB device throught the `VM -> Removable Devices` menu. See below
+
+[<img src="images/set_usb_vmware_cropped.png" width="300"/>](images/set_usb_vmware.png) [<img src="images/Connect_Realsense_VMWare.png" width="300"/>](images/Connect_Realsense_VMWare.png)
 
 ## Connectiong USB in virtual box
-- Make sure the USB adapter is set to USB 3
+- Make sure the USB adapter is set to USB 3. Then once the VM is turned on connect to the USB device throught the `Devices -> USB` menu. See below
+
+[<img src="images/set_usb_virtualbox_cropped.png" width="300"/>](images/set_usb_virtualbox.png) [<img src="images/Connect_Realsense_VirtualBox.png" width="300"/>](images/Connect_Realsense_VirtualBox.png)
 - Once connected to your VM
+
+
 
 # <a name="docker"></a>Setting up the Docker Development Enviroment
 To setup the developement enviroment the following steps must be performed
