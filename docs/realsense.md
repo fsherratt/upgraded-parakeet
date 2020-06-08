@@ -54,7 +54,7 @@ Intel provide a detailed description of how stereo depth is calculated here,
 ## Camera Coordinate System
 The D435 camera uses the following coordinate system. The X-axis points to the right, the positive Y-axis points down, and the positive Z-axis points forward. To convert to a FRD coordinate system a mapping of `[X, Y, Z] = [Z, X, -Y]` is used
 
-![D435 coordinate system](https://raw.githubusercontent.com/fsherratt/upgraded-parakeet/feature/realsense/docs/images/D435_CS_axis.png)
+![D435 coordinate system](images/D435_CS_axis.png)
 
 _Source: [How-to: Getting IMU data from D435i and T265](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)_
 
@@ -95,7 +95,7 @@ Inside out 6 DOF tracking camera. Uses a combination of SLAM using stereo graysc
 ## Camera Coordinate Frame
 The T265 uses the defacto VR framework standard coordinate system instead of the SDK standard. The positive X direction is towards right imager, the positive Y direction is upwards toward the top of the device, with the zero reference aligned to gravity, and the positive Z direction is inwards toward the back of the device.
 
-![T265 coordinate system](https://raw.githubusercontent.com/fsherratt/upgraded-parakeet/feature/realsense/docs/images/T265_CS_axis.png)
+![T265 coordinate system](images/T265_CS_axis.png)
 
 _Source: [How-to: Getting IMU data from D435i and T265](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)_
 
