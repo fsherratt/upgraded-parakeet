@@ -3,7 +3,7 @@ This docuemnent contains instructions on how to setup development enviroment for
 
 ## Table of Contents
 - [Setting up a VM on Windows](#windows)
-- [Setting up the Docker Development Enviroment](#docker)
+- [Docker Development Enviroment](#docker)
 - [Using VSCode for Development](#vscode)
 
 # <a name="windows"></a>Setting up a Virtual Machine on Windows
@@ -33,7 +33,7 @@ Make sure the USB adapter is set to USB 3. Then once the VM is turned on connect
 
 `lsusb` can be run to confirm the USB device has been detected
 
-# <a name="docker"></a>Set up the Docker Development Enviroment
+# <a name="docker"></a>Docker Development Enviroment
 To setup the developement enviroment the following steps must be performed
 
 Install docker - Follow the instructions listed below
@@ -47,43 +47,71 @@ $ git clone https://github.com/fsherratt/upgraded-parakeet.git
 Build the docker container, this may take a while
 ```bash
 $ cd upgraded-parakeet
-$ docker build --tag tbd-erl .
+$ sudo docker build --tag tbd-erl .
 ```
-Launch a docker container. The `--mount` flag can be used to connect host OS directories to the docker container, see more here [_Use bind mounts_](https://docs.docker.com/storage/bind-mounts/). The below commands mounts the current working directory to `workspaces/upgraded-parakeet` in the docker container.
+Launch a docker container. The `--mount` flag can be used to connect host OS directories to the docker container, see more here [_Use bind mounts_](https://docs.docker.com/storage/bind-mounts/). The below commands mounts the upgraded_parakeet directory to `workspaces/upgraded-parakeet` in the docker container.
 ```bash
-$ docker run \
-    -it \
+$ sudo docker run \
     --name devtest \
-    --mount source="$(pwd)",target=/workspaces/upgraded-parakeet,type=bind \
+    --mount source=[PATH_TO_UPGRADED_PARAKEET],target=/workspaces/upgraded-parakeet,type=bind \
     tbd-erl
 ```
 
 ## Accessing Host USB Devices
 To allow a docker container to access host USB device it must be running in an elevated privilieged mode, this can be achieved using the `--privileged` flag.
 ```bash
-$ docker run --privileged ...
+$ sudo docker run --privileged ...
 ``` 
 
 ## Displaying Graphics from Docker
-The following Docker options lines connect the host X11 server to the docker enviroment, _tested on Ubunutu 18.04_. This is useful for visualising results using commands such as `cv2.imshow`.
+Docker is a command line only enviroment so in order to display graphics suitable resource must be presented to it. The following Docker options lines connect the host X11 server to the docker enviroment, _tested on Ubunutu 18.04_. This is useful for visualising results using commands such as `cv2.imshow`.
 ```bash
-$ docker run \
-    --env DISPLAY=${localEnv:DISPLAY} \
-    --mount source=/dev,target=/dev,type=bind \
+$ sudo docker run \
+    --env DISPLAY \
     --mount source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind \
     ...
 ```
+<!-- --mount source=/dev,target=/dev,type=bind \ -->
 The following line must be run in the docker host OS to allos external access to the host X11 service. It must be run in the after each restart
 ```bash
 $ xhost +
 access control disabled, clients can connect from any host
 ```
 
-# <a name="vscode"></a>Using VSCode for Development
-Microsoft's VSCode IDE has a [remote container extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) that make developing in a docker enviroment closer to conventional programming. The `ms-vscode-remote.remote-containers` extension allows VSCode to initialise and control Docker containers. Many more details here [VS Code Remote Development
-](https://code.visualstudio.com/docs/remote/remote-overview)
+## Complete Command
+```bash
+$ sudo docker run \
+    --name erl_dev
+    --privileged \
+    -env DISPLAY \
+    --mount source=[PATH_TO_UPGRADED_PARAKEET],target=/workspaces/upgraded-parakeet,type=bind \
+    --mount source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind \
+    tbd-erl
+```
 
-An example container file can be found here [devcontainer.json](example\devcontainer.json)
+To start a stopped container
+```bash
+sudo docker start erl_dev
+```
+
+To connect to a running container, the `-it` flag starts and interative terminal session
+```bash
+sudo docker exec -it erl_dev \bin\bash
+```
+
+To stop a running container
+```bash
+sudo docker stop erl_dev
+```
+
+Additional commands see [_Command-line reference_](https://docs.docker.com/engine/reference/commandline/docker/)
+
+# <a name="vscode"></a>Using VSCode for Development
+Microsoft's [VSCode IDE](https://code.visualstudio.com/) features tools for working with containers that give a more familiar programming feel. 
+
+The [_ms-vscode-remote.remote-containers_](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension allows VSCode to initialise and control Docker containers. Many more details can be found here [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview)
+
+VSCodes interation with the repository container are defined by the `.devcontainer/devcontainer.json` file. An exaple file for this repository can be found here [devcontainer.json](example\devcontainer.json)
 
 ## VSCode settings
-The [settings.json](example\settings.json) contains an example settings file that has been produced while developing this code.
+IDE settings for the project are set in the `.vscode/settings.json` file. An example settings file for this project can be found here [.vscode/settings.json](example\settings.json).

@@ -1,0 +1,22 @@
+ //.vscode/devcontainer.json
+ {
+	"name": "ERL Dockerfile",
+	"context": "..",
+	"dockerFile": "../Dockerfile",
+	"settings": {
+		"terminal.integrated.shell.linux": null
+	},
+	"extensions": [
+		"ms-python.python",
+		"littlefoxteam.vscode-python-test-adapter"
+	],
+	"runArgs": [
+		"--privileged"
+	],
+	"mounts": [
+		"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+	],
+	"remoteEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}"
+	}
+}
