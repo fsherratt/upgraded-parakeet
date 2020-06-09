@@ -2,9 +2,16 @@
 This docuemnent contains instructions on how to setup development enviroment for the TBDr ERL codebase. These instructions have been tested in Windows 10 and Ubuntu 18.04.
 
 ## Table of Contents
+- [Useful Links](#useful)
 - [Setting up a VM on Windows](#windows)
 - [Docker Development Enviroment](#docker)
 - [Using VSCode for Development](#vscode)
+
+# <a name="useful"></a>Useful Links
+- [Docker overview](https://docs.docker.com/get-started/overview/)
+- [Oracle VirtualBox](https://www.virtualbox.org/)
+- [VSCode IDE](https://code.visualstudio.com/)
+- [Ubuntu 18.04](https://releases.ubuntu.com/18.04/)
 
 # <a name="windows"></a>Setting up a Virtual Machine on Windows
 The basic instructions are as follows
@@ -58,7 +65,7 @@ $ sudo docker run \
 ```
 
 ## Accessing Host USB Devices
-To allow a docker container to access host USB device it must be running in an elevated privilieged mode, this can be achieved using the `--privileged` flag.
+To allow a docker container to access host USB device it must be running in an elevated privilieged mode, this can be achieved using the `--privileged` flag. More details on the flag are available here [Priviege Mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities)
 ```bash
 $ sudo docker run --privileged ...
 ``` 
