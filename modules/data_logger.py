@@ -22,7 +22,7 @@ class LoggingInterface(AsyncMessageCallback):
 
         self.stop_logging_loop()
 
-    def message_callback(self, data):
+    def message_callback(self, channel, method, properties, data):
         if self._loop_running:
             self.queue_message(data)
 
@@ -78,5 +78,5 @@ if __name__ == "__main__":
 
     with file_log:
         for i in range(10):
-            file_log.message_callback(i)
+            file_log.message_callback(None, None, None, i)
             time.sleep(1)

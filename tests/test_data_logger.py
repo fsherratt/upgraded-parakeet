@@ -12,8 +12,11 @@ class TestDataLogger(TestCase):
 
     @mock.patch('modules.async_message.AsyncMessageCallback.queue_message')
     def test_logging_queue_put(self, mock_fcn):
+        channel = None
+        properties = None
+        method = None
         data = 'Data'
-        self.logObj.message_callback(data)
+        self.logObj.message_callback(channel, method, properties, data)
         mock_fcn.assert_called_with(data)
 
     def test_thread_created(self):
@@ -32,7 +35,7 @@ class TestDataLogger(TestCase):
     @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_loop_stays_open_after_message(self, mock_save):
         self.logObj.start_logging_loop()
-        self.logObj.message_callback('data')
+        self.logObj.message_callback(None, None, None, 'data')
         
         import time
         time.sleep(0.1)
@@ -45,7 +48,7 @@ class TestDataLogger(TestCase):
         self.logObj.start_logging_loop()
         
         mock_save.assert_not_called()
-        self.logObj.message_callback('data')
+        self.logObj.message_callback(None, None, None,'data')
         import time
         time.sleep(0.1)
 
