@@ -1,4 +1,4 @@
-# Setup
+# Development Enviroment Setup
 This docuemnent contains instructions on how to setup development enviroment for the TBDr ERL codebase. These instructions have been tested in Windows 10 and Ubuntu 18.04.
 
 ## Table of Contents
@@ -14,17 +14,17 @@ This docuemnent contains instructions on how to setup development enviroment for
 - [Ubuntu 18.04](https://releases.ubuntu.com/18.04/)
 
 # <a name="windows"></a>Setting up a Virtual Machine on Windows
-The basic instructions are as follows
-- Download and install [Oracle VirtualBox](https://www.virtualbox.org/)
-- Download the latest Ubuntu 18.04 .iso [here](https://releases.ubuntu.com/18.04/)
-- Disable Microsoft Hyper-v if enabled, see below
-- Follow instructions for setting up virtual machine, [here](https://brb.nci.nih.gov/seqtools/installUbuntu.html)
-- If using realsense cameras setup USB connections as below
-- Follow developement enviroment setup, [see below](#docker)
-- Do programming
+To install a VM on windows follow the instructions below:
+1. Download and install [Oracle VirtualBox](https://www.virtualbox.org/)
+1. Download the latest Ubuntu 18.04 .iso [here](https://releases.ubuntu.com/18.04/)
+1. Disable Microsoft Hyper-v if enabled, see below
+1. Follow instructions for setting up virtual machine, [here](https://brb.nci.nih.gov/seqtools/installUbuntu.html)
+1. If using realsense cameras setup USB connections as below
+1. Follow developement enviroment setup, [see below](#docker)
+1. Do cool stuff
 
 ## Disable Hyper-v
-Search for `Turn windows features on or off`. In the list of features make sure `Hyper-V -> Hyper-V Platform -> Hyper-V Hypervisors` is deselected. Then restart your computer.
+In the start menu search for `Turn windows features on or off`. In the list make sure `Hyper-V -> Hyper-V Platform -> Hyper-V Hypervisors` is deselected as below, then restart your computer.
 
 [<img src="images/disable-hyper-v.png" width="300"/>](images/disable-hyper-v.png)
 
@@ -34,43 +34,53 @@ Make sure USB is set to 3.1. Then once the VM is turned on connect to the USB de
 [<img src="images/set_usb_vmware_cropped.png" width="300"/>](images/set_usb_vmware.png) [<img src="images/Connect_Realsense_VMWare.png" width="300"/>](images/Connect_Realsense_VMWare.png) -->
 
 ## Connectiong USB Devices in Virtual Box
-Make sure the USB adapter is set to USB 3. Then once the VM is turned on connect to the USB device throught the `Devices -> USB` menu. See below
+In the setting menu of the VM make sure the USB adapter is set to USB 3. Turn on your VM and once connected you can pass through a USB connecting through the `Devices -> USB` menu. The `lsusb` command can be run to confirm the USB device has been detected in the VM. 
 
 [<img src="images/set_usb_virtualbox_cropped.png" width="300"/>](images/set_usb_virtualbox.png) [<img src="images/Connect_Realsense_VirtualBox.png" width="300"/>](images/Connect_Realsense_VirtualBox.png)
 
-`lsusb` can be run to confirm the USB device has been detected
-
 # <a name="docker"></a>Docker Development Enviroment
-To setup the developement enviroment the following steps must be performed
+Project developement is undertaken in a docker enviroment. Docker gives a consistent devopment enviroment for everyone reducing the setup time significantly. To setup the developement enviroment follow the steps below:
 
-Install docker - Follow the instructions listed below
-- [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
-- [Post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
+1. Install docker - Follow the instructions listed below
+    - [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+    - [Post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
 
-Clone the github repository
-```bash
-$ git clone https://github.com/fsherratt/upgraded-parakeet.git
-```
-Build the docker container, this may take a while
-```bash
-$ cd upgraded-parakeet
-$ sudo docker build --tag tbd-erl .
-```
-Launch a docker container. The `--mount` flag can be used to connect host OS directories to the docker container, see more here [_Use bind mounts_](https://docs.docker.com/storage/bind-mounts/). The below commands mounts the upgraded_parakeet directory to `workspaces/upgraded-parakeet` in the docker container.
+2. Clone the github repository
+    ```bash
+    $ git clone https://github.com/fsherratt/upgraded-parakeet.git
+    ```
+
+3. Build the docker container, get a drink this may take a while. 
+    ```bash
+    $ cd upgraded-parakeet
+    $ sudo docker build --tag tbd-erl .
+    ```
+    The docker file is built according to the instructions provided by a Dockerfile, in this case the file in the root directory of the repository, [Dockerfile](../Dockerfile).
+
+4. Launch the docker container using `run` command and begin playing.
+    ```bash
+    $ sudo docker run --name erl_dev -it tbd-erl
+    ```
+
+## Docker Commands
+Some notes on the above command. The `-it` flag launces it as an interative terminal session. Alternatively the `-d` can be used to start a dettached process. The `--name` flag allows friendly names to be specified for the contianer instance. If ommited a generated name is used instead.
+
+### Accessing files
+The `--mount` flag can be used to connect host OS directories to a docker container, more info here [_Use bind mounts_](https://docs.docker.com/storage/bind-mounts/). Using the command below a folder can be mounted to `workspaces/upgraded-parakeet` directory.
 ```bash
 $ sudo docker run \
-    --name devtest \
     --mount source=[PATH_TO_UPGRADED_PARAKEET],target=/workspaces/upgraded-parakeet,type=bind \
-    tbd-erl
+    ... \
+    tbd-erl 
 ```
 
-## Accessing Host USB Devices
+### Accessing Host USB Devices
 To allow a docker container to access host USB device it must be running in an elevated privilieged mode, this can be achieved using the `--privileged` flag. More details on the flag are available here [Priviege Mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities)
 ```bash
 $ sudo docker run --privileged ...
 ``` 
 
-## Displaying Graphics from Docker
+### Displaying Graphics from Docker
 Docker is a command line only enviroment so in order to display graphics suitable resource must be presented to it. The following Docker options lines connect the host X11 server to the docker enviroment, _tested on Ubunutu 18.04_. This is useful for visualising results using commands such as `cv2.imshow`.
 ```bash
 $ sudo docker run \
@@ -85,9 +95,30 @@ $ xhost +
 access control disabled, clients can connect from any host
 ```
 
-## Complete Command
+### Controlling containers
+To list all available containers use the `ps` command, [_docker ps_](https://docs.docker.com/engine/reference/commandline/ps/). The `-a` flag list all containers including those that aren't currently running
 ```bash
-$ sudo docker run \
+$ docker ps -a
+```
+
+To start a stopped container the docker `start` command can be used, [_docker start_](https://docs.docker.com/engine/reference/commandline/start/)
+```bash
+sudo docker start -d erl_dev
+```
+
+To connect to a running container the `attach` command can be used, [_docker attach_](https://docs.docker.com/engine/reference/commandline/attach/)
+```bash
+sudo docker attach erl_dev
+```
+
+To stop a running container, you guessed it... The stop command is used, [_docker stop_](https://docs.docker.com/engine/reference/commandline/stop/)
+```bash
+sudo docker stop erl_dev
+```
+
+### Complete Command
+```bash
+$ sudo docker run -d \
     --name erl_dev
     --privileged \
     -env DISPLAY \
@@ -96,29 +127,13 @@ $ sudo docker run \
     tbd-erl
 ```
 
-To start a stopped container
-```bash
-sudo docker start erl_dev
-```
-
-To connect to a running container, the `-it` flag starts and interative terminal session
-```bash
-sudo docker exec -it erl_dev \bin\bash
-```
-
-To stop a running container
-```bash
-sudo docker stop erl_dev
-```
-
 Additional commands see [_Command-line reference_](https://docs.docker.com/engine/reference/commandline/docker/)
 
 # <a name="vscode"></a>Using VSCode for Development
-Microsoft's [VSCode IDE](https://code.visualstudio.com/) features tools for working with containers that give a more familiar programming feel. 
+As an alternative to command line Microsoft's [VSCode IDE](https://code.visualstudio.com/) can be used. The [_ms-vscode-remote.remote-containers_](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension allows VSCode to initialise and control Docker containers and handles many of the above commands automatically. Many more details can be found here [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview)
 
-The [_ms-vscode-remote.remote-containers_](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension allows VSCode to initialise and control Docker containers. Many more details can be found here [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview)
 
-VSCodes interation with the repository container are defined by the `.devcontainer/devcontainer.json` file. An exaple file for this repository can be found here [devcontainer.json](example\devcontainer.json)
+## VSCode setup
+VSCodes interation with the repository Dockerfile container are defined by the `.devcontainer/devcontainer.json` file. An exaple file for this repository can be found here [devcontainer.json](example\devcontainer.json)
 
-## VSCode settings
 IDE settings for the project are set in the `.vscode/settings.json` file. An example settings file for this project can be found here [.vscode/settings.json](example\settings.json).
