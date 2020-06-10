@@ -1,6 +1,7 @@
 import threading
 import sys
 import time
+import pika
 
 import logging
 
@@ -50,6 +51,21 @@ class LoggingInterface(AsyncMessageCallback):
 class FileLogger(LoggingInterface):
     def __init__(self, log_name, print_to_console=True):
         super().__init__()
+        
+        # Generic setup for the queue.
+        # TODO: Parameterise host, exchange and routing key
+        self._rabbit_thread = None
+        self._connection = pika.BlockingConnection(
+                pika.ConnectionParameters( host='localhost'))
+        self._channel = connection.channel()
+        self._channel.exchange_declare( exchange='logger', exchange_type='direct' )
+        msg_queue = channel.queue_declare( queue='', exclusive=True )
+        self._queue_name = msg_queue.method.queue
+
+        # Specific setup
+        self._channel.queue_bind( exchange='logger', queue=self._queue_name, routing_key='DEBUG' )
+        self._channel.basic_consume(
+                queue=self._queue_name, on_message_callback=self.message_callback, auto_ack=True )
 
         self.logger = logging.getLogger(log_name)
         self.logger.setLevel(logging.DEBUG) # log everything
@@ -70,12 +86,20 @@ class FileLogger(LoggingInterface):
             console_handle.setFormatter(formatter)
             self.logger.addHandler(console_handle)
 
+    """
+    This feels incorrect. Feels like we are creating an async thread to deal with a thread.
+    Maybe should be blocking?
+    """
+    def start_consuming_thread( self ):
+        self._rabbit_thread = threading.Thread(target=self._channel.start_consuming )
+        self._rabbit_thread.start()
+
     def save_to_file(self, msg):
         self.logger.debug(msg[1])
 
 if __name__ == "__main__":
     file_log = FileLogger('telemetry')
-
+    file_log.start_consuming_thread()
     with file_log:
         for i in range(10):
             file_log.message_callback(None, None, None, i)
