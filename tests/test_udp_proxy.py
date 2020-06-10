@@ -1,5 +1,6 @@
 from context import modules
 import unittest
+import mock
 
 from modules.udp_proxy import udp_proxy
 DEFAULT_IP = '127.0.0.1'
@@ -12,5 +13,5 @@ class TestTemplate( TestCase ):
     def tearDown(self):
         pass
 
-    def test_example_assert(self):
-        self.assertEqual(test.testFunc(), 10)
+    def test_bind(self):
+        self.udp_proxy._bind_to_port()
