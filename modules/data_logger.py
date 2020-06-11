@@ -57,9 +57,9 @@ class FileLogger(LoggingInterface):
         self._rabbit_thread = None
         self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters( host='localhost'))
-        self._channel = connection.channel()
+        self._channel = self._connection.channel()
         self._channel.exchange_declare( exchange='logger', exchange_type='direct' )
-        msg_queue = channel.queue_declare( queue='', exclusive=True )
+        msg_queue = self._channel.queue_declare( queue='', exclusive=True )
         self._queue_name = msg_queue.method.queue
 
         # Specific setup

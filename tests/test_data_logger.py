@@ -54,6 +54,14 @@ class TestDataLogger(TestCase):
 
         mock_save.assert_called()
 
+    
+class FileLog(TestCase):
+    def setUp(self):
+        self.logObj = FileLogger( "testcase" )
+    
+    def tearDown(self):
+        self.logObj.stop_logging_loop()
+
     @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_rabbit_mq_message_passed( self, mock_save):
         import pika
@@ -73,9 +81,3 @@ class TestDataLogger(TestCase):
 
         mock_save.assert_called()
 
-class FileLog(TestCase):
-    def setUp(self):
-        self.logObj = FileLogger( "testcase" )
-    
-    def tearDown(self):
-        self.logObj.stop_logging_loop()
