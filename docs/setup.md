@@ -1,11 +1,12 @@
 # Development Enviroment Setup
-This docuemnent contains instructions on how to setup development enviroment for the TBDr ERL codebase. These instructions have been tested in Windows 10 and Ubuntu 18.04.
+This docuemnent contains instructions on how to setup development enviroment for the TBDr ERL codebase. These instructions have been tested on Windows 10 and Ubuntu 18.04.
 
 ## Table of Contents
 - [Useful Links](#useful)
 - [Setting up a VM on Windows](#windows)
 - [Docker Development Enviroment](#docker)
 - [Using VSCode for Development](#vscode)
+- [Next Steps](#steps)
 
 # <a name="useful"></a>Useful Links
 - [Docker overview](https://docs.docker.com/get-started/overview/)
@@ -130,10 +131,20 @@ $ sudo docker run -d \
 Additional commands see [_Command-line reference_](https://docs.docker.com/engine/reference/commandline/docker/)
 
 # <a name="vscode"></a>Using VSCode for Development
-As an alternative to command line Microsoft's [VSCode IDE](https://code.visualstudio.com/) can be used. The [_ms-vscode-remote.remote-containers_](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension allows VSCode to initialise and control Docker containers and handles many of the above commands automatically. Many more details can be found here [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview)
-
+As an alternative to command line Microsoft's [VSCode IDE](https://code.visualstudio.com/) can be used. 
 
 ## VSCode setup
-VSCodes interation with the repository Dockerfile container are defined by the `.devcontainer/devcontainer.json` file. An exaple file for this repository can be found here [devcontainer.json](example\devcontainer.json)
+The [_ms-vscode-remote.remote-containers_](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension allows VSCode to initialise and control Docker containers removing the need for many of the above commands. Once VSCode is installed follow the link above or search for `remote containers` in the extensions tab.
 
-IDE settings for the project are set in the `.vscode/settings.json` file. An example settings file for this project can be found here [.vscode/settings.json](example\settings.json).
+VSCodes interation with the repository Dockerfile container is specified in the `.devcontainer/devcontainer.json` file. As a starter for this repsoitory see here: [_devcontainer.json_](example/devcontainer.json)
+
+Many more details can be found here [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview).
+
+Additionaly IDE settings can be set using specified using the `.vscode/settings.json` file. An example settings file for this project can be found here [_.vscode/_settings.json_](example/settings.json).
+
+# <a name="useful"></a>Next Steps
+Now you have a working development enviroment setup you can follow the other documentation to get started with the project.
+
+- For launching modules see the [startup](startup.md) documentation.
+- For details of simulation enviroments see [...](#)
+
