@@ -60,24 +60,28 @@ class FileLog(TestCase):
         self.logObj = FileLogger( "testcase" )
     
     def tearDown(self):
+        print( "tear down called" )
         self.logObj.stop_logging_loop()
+        self.logObj.stop_consuming()
 
     @mock.patch('modules.data_logger.LoggingInterface.save_to_file')
     def test_rabbit_mq_message_passed( self, mock_save):
         import pika
         self.logObj.start_consuming_thread()
-
+        print( "Starting test")
         # Setup a rabbit mq publisher to test our logger recieves it correctly.
         connection = pika.BlockingConnection(
                 pika.ConnectionParameters( host='localhost') )
         channel = connection.channel()
 
         channel.exchange_declare( exchange='logger', exchange_type='direct')
+        print( "Publishing connect..." )
         channel.basic_publish( exchange='logger', routing_key='DEBUG', body="Data")
         connection.close()
 
         import time
-        time.sleep(0.1)
-
+        time.sleep(0.5)
+        
+        print( "Check mock" )
         mock_save.assert_called()
 

@@ -91,8 +91,15 @@ class FileLogger(LoggingInterface):
     Maybe should be blocking?
     """
     def start_consuming_thread( self ):
+        print( "Starting production" )
         self._rabbit_thread = threading.Thread(target=self._channel.start_consuming )
         self._rabbit_thread.start()
+
+    def stop_consuming( self ):
+        print( "Stopping production" )
+        self._connection.close()
+        #TODO: This is breaking. How do I get this to work correctly?
+        print( "Connection closed...")
 
     def save_to_file(self, msg):
         self.logger.debug(msg[1])
@@ -104,3 +111,4 @@ if __name__ == "__main__":
         for i in range(10):
             file_log.message_callback(None, None, None, i)
             time.sleep(1)
+        self.stop_consuming()
