@@ -138,4 +138,20 @@ ENV PATH /ardupilot/.local/bin:$PATH
 WORKDIR "/ardupilot"
 RUN ./waf configure --board sitl && ./waf copter -j$(nproc)
 
+
+#############
+# Rabbit MQ #
+#############
+WORKDIR "/"
+
+RUN apt-get update -y && \
+apt-get install curl gnupg dirmngr -y && \
+curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc | sudo apt-key add - && \
+apt-get install apt-transport-https erlang -y && \
+apt-get install rabbitmq-server -y --fix-missing
+
+###########
+# Tidy Up #
+###########
+
 WORKDIR "/workspaces/"
