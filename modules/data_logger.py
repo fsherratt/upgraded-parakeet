@@ -7,6 +7,7 @@ import logging
 
 from .async_message import AsyncMessageCallback
 
+
 class LoggingInterface(AsyncMessageCallback):
     def __init__(self):
         super().__init__()
@@ -28,13 +29,13 @@ class LoggingInterface(AsyncMessageCallback):
             self.queue_message(data)
 
     def log_loop(self):
-        while self._loop_running:
-            msg = self.wait_for_message()
+        # while self._loop_running:
+        msg = self.wait_for_message()
 
-            if msg is None:
-                continue
+        if msg is None:
+            return
 
-            self.save_to_file(msg)
+        self.save_to_file(msg)
 
     def start_logging_loop(self):
         self._log_thread = threading.Thread(target=self.log_loop)
@@ -48,32 +49,25 @@ class LoggingInterface(AsyncMessageCallback):
         # Save message to file using abstracted save method
         print(msg, file=sys.stdout)
 
+
 class FileLogger(LoggingInterface):
     def __init__(self, log_name, print_to_console=True):
         super().__init__()
-        
+
         # Generic setup for the queue.
         # TODO: Parameterise host, exchange and routing key
-        self._rabbit_thread = None
-        self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters( host='localhost'))
-        self._channel = self._connection.channel()
-        self._channel.exchange_declare( exchange='logger', exchange_type='direct' )
-        msg_queue = self._channel.queue_declare( queue='', exclusive=True )
-        self._queue_name = msg_queue.method.queue
-
-        # Specific setup
-        self._channel.queue_bind( exchange='logger', queue=self._queue_name, routing_key='DEBUG' )
-        self._channel.basic_consume(
-                queue=self._queue_name, on_message_callback=self.message_callback, auto_ack=True )
 
         self.logger = logging.getLogger(log_name)
-        self.logger.setLevel(logging.DEBUG) # log everything
+        self.logger.setLevel(logging.DEBUG)  # log everything
 
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
-        log_directory = 'logs/'
-        log_filename = log_directory+ log_name + '_' + time.strftime("%Y%m%d-%H%M%S") + '.log'
+        log_directory = "logs/"
+        log_filename = (
+            log_directory + log_name + "_" + time.strftime("%Y%m%d-%H%M%S") + ".log"
+        )
 
         file_handle = logging.FileHandler(log_filename)
         file_handle.setLevel(logging.DEBUG)
@@ -90,22 +84,60 @@ class FileLogger(LoggingInterface):
     This feels incorrect. Feels like we are creating an async thread to deal with a thread.
     Maybe should be blocking?
     """
-    def start_consuming_thread( self ):
-        print( "Starting production" )
-        self._rabbit_thread = threading.Thread(target=self._channel.start_consuming )
+
+    def start_consuming_thread(self):
+        print("Starting production")
+        self._rabbit_thread = threading.Thread(target=self.consumer_loop)
         self._rabbit_thread.start()
 
-    def stop_consuming( self ):
-        print( "Stopping production" )
-        self._connection.close()
-        #TODO: This is breaking. How do I get this to work correctly?
-        print( "Connection closed...")
+    def consumer_loop(self):
+        self._rabbit_thread = None
+        self._connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host="localhost")
+        )
+        self._channel = self._connection.channel()
+        self._channel.exchange_declare(exchange="logger", exchange_type="direct")
+        msg_queue = self._channel.queue_declare(queue="", exclusive=True)
+        self._queue_name = msg_queue.method.queue
+
+        # Specific setup
+        self._channel.queue_bind(
+            exchange="logger", queue=self._queue_name, routing_key="DEBUG"
+        )
+        self._channel.basic_consume(
+            queue=self._queue_name,
+            on_message_callback=self.message_callback,
+            auto_ack=True,
+        )
+
+        try:
+            self._channel.start_consuming()
+        except Exception as e:
+            print(e)
+
+    def stop_logging_loop(self):
+        super().stop_logging_loop()
+        self.stop_consuming()
+
+    def stop_consuming(self):
+        print("Stopping production")
+        if self._channel:
+            self._channel.stop_consuming()
+
+        try:
+            self._connection.close()
+        except pika.exceptions.ConnectionWrongStateError:
+            print("Connection already closed")
+        else:
+            # TODO: This is breaking. How do I get this to work correctly?
+            print("Connection closed...")
 
     def save_to_file(self, msg):
         self.logger.debug(msg[1])
 
+
 if __name__ == "__main__":
-    file_log = FileLogger('telemetry')
+    file_log = FileLogger("telemetry")
     file_log.start_consuming_thread()
     with file_log:
         for i in range(10):
