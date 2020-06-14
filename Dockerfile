@@ -38,7 +38,7 @@ RUN apt-get install -y python3 python3-pip python3-dev \
   && cd /usr/local/bin \
   && pip3 install --upgrade pip
 
-RUN pip3 install numpy pylint scipy coverage pytest OmegaConf
+RUN pip3 install numpy pylint scipy coverage pytest OmegaConf black
 
 ###################
 # Install Open CV #
@@ -137,5 +137,23 @@ ENV PATH /ardupilot/.local/bin:$PATH
 
 WORKDIR "/ardupilot"
 RUN ./waf configure --board sitl && ./waf copter -j$(nproc)
+
+
+#############
+# Rabbit MQ #
+#############
+WORKDIR "/"
+
+RUN apt-get update -y && \
+apt-get install curl gnupg dirmngr -y && \
+curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc | sudo apt-key add - && \
+apt-get install apt-transport-https erlang -y && \
+apt-get install rabbitmq-server -y --fix-missing
+
+RUN pip3 install pika
+
+###########
+# Tidy Up #
+###########
 
 WORKDIR "/workspaces/"
