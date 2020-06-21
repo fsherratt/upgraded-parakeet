@@ -85,11 +85,12 @@ class Startup:
     # TODO: Exception handling decorator
     def _main_loop(self):
         self.module_startup()
+        try:
+            while self.module_running:
+                self.module_loop()
 
-        while self.module_running:
-            self.module_loop()
-
-        self.module_shutdown()
+        finally:
+            self.module_shutdown()
 
     def _stop_health_loop(self):
         self.health_loop_delay_event.set()
