@@ -202,6 +202,12 @@ class DepthPipeline(RealsensePipeline):
         Get camera intrinsics
         """
         profile = self._pipe.get_active_profile()
+        sensor = profile.get_device().first_depth_sensor()
+
+        time.sleep(1)
+        sensor.set_option(
+            rs.option.visual_preset, self.conf.realsense.depth.visual_preset
+        )
 
         intrin = (
             profile.get_stream(rs.stream.depth)
@@ -209,7 +215,7 @@ class DepthPipeline(RealsensePipeline):
             .get_intrinsics()
         )
 
-        scale = profile.get_device().first_depth_sensor().get_depth_scale()
+        scale = sensor.get_depth_scale()
 
         self._intrin = data_types.Intrinsics(
             scale, intrin.ppx, intrin.ppy, intrin.fx, intrin.fy

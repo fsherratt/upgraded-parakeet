@@ -7,6 +7,8 @@ realsense:
         height: 480
         framerate: 30
 
+        visual_preset: 3
+
     # Realsense D435 RGB camera setup
     color:
         object_name: 'Color'

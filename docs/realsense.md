@@ -47,6 +47,18 @@ with depth_obj:
 
 __Source [Intel® RealSense™ Depth Camera D435](https://store.intelrealsense.com/buy-intel-realsense-depth-camera-d435.html)_
 
+
+## Visual Presets
+Various visual presets exsist for the depth camera. These change the onboard paramaters for different situations. More details can be found here, [D400 Series Visual Presets](https://github.com/IntelRealSense/librealsense/wiki/D400-Series-Visual-Presets).
+| Value | Preset |
+| --- | --- |
+| 0 | Custom |
+| 1 | Default |
+| 2 | Hand |
+| 3 | High Accuracy |
+| 4 | High Density |
+| 5 | Medium Density |
+
 ## Depth calcuation
 Intel provide a detailed description of how stereo depth is calculated here,
 [Depth from Stereo](https://github.com/IntelRealSense/librealsense/blob/28c404a419ebab98d2ee93615776e8cefb46a340/doc/depth-from-stereo.md).
