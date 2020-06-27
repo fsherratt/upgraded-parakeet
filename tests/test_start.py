@@ -20,6 +20,7 @@ class TestProcessManagement(TestCase):
             config_file="config_file",
             process_tag="test_tag",
             debug=True,
+            health_monitor=True,
         )
 
         rtn = start.launch_process(test_launch_item)
@@ -34,10 +35,18 @@ class TestProcessManagement(TestCase):
 
         test_process_list = [
             data_types.StartupItem(
-                module="test_tag", config_file="", process_tag="", debug=True
+                module="test_tag",
+                config_file="",
+                process_tag="",
+                debug=True,
+                health_monitor=True,
             ),
             data_types.StartupItem(
-                module="test_tag_2", config_file="", process_tag="", debug=True
+                module="test_tag_2",
+                config_file="",
+                process_tag="",
+                debug=True,
+                health_monitor=True,
             ),
         ]
 

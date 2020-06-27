@@ -10,15 +10,13 @@ class TestStartup(TestCase):
         self.start_obj = startup.Startup(self.proc_name)
 
     @mock.patch("modules.startup.Startup.health_loop")
-    @mock.patch("modules.startup.Startup.module_startup")
     @mock.patch("threading.Thread")
     @mock.patch("threading.Thread.start")
-    def test_run(self, mock_thread_start, mock_thread, mock_startup, mock_health_loop):
+    def test_run(self, mock_thread_start, mock_thread, mock_health_loop):
         mock_thread.return_value = Thread(target=lambda x: x)
 
         self.start_obj.run()
 
-        mock_startup.assert_called()
         mock_health_loop.assert_called()
         mock_thread_start.assert_called()
 
