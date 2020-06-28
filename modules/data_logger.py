@@ -92,9 +92,13 @@ class FileLogger(LoggingInterface):
 
 if __name__ == "__main__":
     file_log = FileLogger("telemetry")
-    file_log.start_consuming_thread()
+
+    msg_producer = message_broker.producer("logger", "DEBUG")
+    msg_producer.open_channel()
+
     with file_log:
         for i in range(10):
-            file_log.message_callback(None, None, None, i)
-            time.sleep(1)
-        self.stop_consuming()
+            msg_producer.send_message(str(i))
+            time.sleep(0.1)
+
+    msg_producer.close_channel()

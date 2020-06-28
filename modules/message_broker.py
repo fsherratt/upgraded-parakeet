@@ -4,17 +4,14 @@ import time
 import pika
 
 
-class consumer:
+class rabbit_mq_generic:
     def __init__(
         self,
-        callback,
-        routing_key,
-        exchange_key,
+        routing_key: str,
+        exchange_key: str,
         exchange_type="direct",
         host="localhost",
     ):
-        self.callback = callback
-
         self.exchange_key = exchange_key
         self.routing_key = routing_key
 
@@ -24,16 +21,16 @@ class consumer:
         self._connection = None
         self._channel = None
 
-        self._rabbit_thread = None
-
-    def start_consuming_thread(self):
-        print("Starting production")
-        self._rabbit_thread = threading.Thread(
-            target=self.consumer_loop, name="rabbit_mq_consumer"
+    def open_exchange(self):
+        self._connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=self.host)
         )
-        self._rabbit_thread.start()
+        self._channel = self._connection.channel()
+        self._channel.exchange_declare(
+            exchange=self.exchange_key, exchange_type=self.exchange_type
+        )
 
-    def stop_consuming(self):
+    def close_exchange(self):
         print("Stopping production")
         if self._channel:
             try:
@@ -50,14 +47,26 @@ class consumer:
             except pika.exceptions.AMQPConnectionError:
                 print("Error when closing connection")
 
+
+class consumer(rabbit_mq_generic):
+    def __init__(self, callback, **kwargs):
+        super().__init__(**kwargs)
+
+        self.callback = callback
+        self._rabbit_thread = None
+
+    def start_consuming_thread(self):
+        print("Starting production")
+        self._rabbit_thread = threading.Thread(
+            target=self.consumer_loop, name="rabbit_mq_consumer"
+        )
+        self._rabbit_thread.start()
+
+    def stop_consuming(self):
+        self.close_exchange()
+
     def consumer_loop(self):
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self.host)
-        )
-        self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange=self.exchange_key, exchange_type=self.exchange_type
-        )
+        self.open_exchange()
 
         msg_queue = self._channel.queue_declare(queue="", exclusive=True)
         queue_name = msg_queue.method.queue
@@ -77,3 +86,15 @@ class consumer:
 
     def message_callback(self, channel, method, properties, data):
         self.callback(data)
+
+
+class producer(rabbit_mq_generic):
+    def open_channel(self):
+        self.open_exchange()
+
+    def send_message(self, msg):
+        self._channel.basic_publish(exchange="logger", routing_key="DEBUG", body=msg)
+
+    def close_channel(self):
+        self.close_exchange()
+
