@@ -1,3 +1,5 @@
+import time
+
 from context import modules
 from unittest import TestCase, mock
 
@@ -13,20 +15,19 @@ class TestDataLogger(TestCase):
 
     @mock.patch("modules.async_message.AsyncMessageCallback.queue_message")
     def test_logging_queue_put(self, mock_fcn):
-        channel = None
-        properties = None
-        method = None
         data = "Data"
-        self.logObj.message_callback(channel, method, properties, data)
+        self.logObj.message_callback(data)
         mock_fcn.assert_called_with(data)
 
     def test_thread_created(self):
         self.logObj.start_logging_loop()
 
         self.assertTrue(self.logObj._log_thread.is_alive())
+        time.sleep(0.1)
 
     def test_thread_closed(self):
         self.logObj.start_logging_loop()
+        time.sleep(0.2)
         self.logObj.stop_logging_loop()
 
         self.logObj._log_thread.join(timeout=2)
@@ -36,9 +37,8 @@ class TestDataLogger(TestCase):
     @mock.patch("modules.data_logger.LoggingInterface.save_to_file")
     def test_loop_stays_open_after_message(self, mock_save):
         self.logObj.start_logging_loop()
-        self.logObj.message_callback(None, None, None, "data")
-
-        import time
+        time.sleep(0.1)
+        self.logObj.message_callback("data")
 
         time.sleep(0.1)
 
@@ -49,9 +49,10 @@ class TestDataLogger(TestCase):
         self.logObj._wait_timeout = 0
         self.logObj.start_logging_loop()
 
+        time.sleep(0.2)
+
         mock_save.assert_not_called()
-        self.logObj.message_callback(None, None, None, "data")
-        import time
+        self.logObj.message_callback("data")
 
         time.sleep(0.1)
 
@@ -70,7 +71,8 @@ class FileLog(TestCase):
     def test_rabbit_mq_message_passed(self, mock_save):
         import pika
 
-        self.logObj.start_consuming_thread()
+        self.logObj.start_logging_loop()
+
         print("Starting test")
         # Setup a rabbit mq publisher to test our logger recieves it correctly.
         connection = pika.BlockingConnection(
@@ -80,10 +82,12 @@ class FileLog(TestCase):
 
         channel.exchange_declare(exchange="logger", exchange_type="direct")
         print("Publishing connect...")
-        channel.basic_publish(exchange="logger", routing_key="DEBUG", body="Data")
-        connection.close()
 
-        self.logObj.log_loop()
+        time.sleep(0.5)
+        channel.basic_publish(exchange="logger", routing_key="DEBUG", body="Data")
+        time.sleep(0.5)
+
+        connection.close()
 
         print("Check mock")
         mock_save.assert_called()
