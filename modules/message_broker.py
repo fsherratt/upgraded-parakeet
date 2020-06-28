@@ -47,7 +47,12 @@ class consumer:
         try:
             if self._connection:
                 self._connection.close()
-        except pika.exceptions.ConnectionWrongStateError:
+        except pika.exceptions.StreamLostError:
+            print("Stream lost")
+        except (
+            pika.exceptions.ConnectionWrongStateError,
+            pika.exceptions.ConnectionClosedByBroker,
+        ):
             print("Connection already closed")
 
     def consumer_loop(self):

@@ -21,13 +21,13 @@ class TestDataLogger(TestCase):
 
     def test_thread_created(self):
         self.logObj.start_logging_loop()
+        time.sleep(0.1)
 
         self.assertTrue(self.logObj._log_thread.is_alive())
-        time.sleep(0.1)
 
     def test_thread_closed(self):
         self.logObj.start_logging_loop()
-        time.sleep(0.2)
+        time.sleep(0.1)
         self.logObj.stop_logging_loop()
 
         self.logObj._log_thread.join(timeout=2)
@@ -39,9 +39,6 @@ class TestDataLogger(TestCase):
         self.logObj.start_logging_loop()
         time.sleep(0.1)
         self.logObj.message_callback("data")
-
-        time.sleep(0.1)
-
         self.assertTrue(self.logObj._log_thread.is_alive())
 
     @mock.patch("modules.data_logger.LoggingInterface.save_to_file")
@@ -49,7 +46,7 @@ class TestDataLogger(TestCase):
         self.logObj._wait_timeout = 0
         self.logObj.start_logging_loop()
 
-        time.sleep(0.2)
+        time.sleep(0.1)
 
         mock_save.assert_not_called()
         self.logObj.message_callback("data")
@@ -83,9 +80,9 @@ class FileLog(TestCase):
         channel.exchange_declare(exchange="logger", exchange_type="direct")
         print("Publishing connect...")
 
-        time.sleep(0.5)
+        time.sleep(0.1)
         channel.basic_publish(exchange="logger", routing_key="DEBUG", body="Data")
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         connection.close()
 
