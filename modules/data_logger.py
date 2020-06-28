@@ -44,9 +44,7 @@ class LoggingInterface(AsyncMessageCallback):
     def start_logging_loop(self):
         self.msg_consumer.start_consuming_thread()
 
-        self._log_thread = threading.Thread(
-            target=self.log_loop, name="log_loop", daemon=True
-        )
+        self._log_thread = threading.Thread(target=self.log_loop, name="log_loop")
         self._log_thread.start()
 
     def stop_logging_loop(self):
