@@ -35,25 +35,20 @@ class consumer:
 
     def stop_consuming(self):
         print("Stopping production")
-        try:
-            if self._channel:
+        if self._channel:
+            try:
                 self._channel.stop_consuming()
-        except pika.exceptions.StreamLostError:
-            print("Stream lost")
+            except pika.exceptions.StreamLostError:
+                print("Stream lost")
 
         # Delay gives time for stream to close
         time.sleep(0.1)
 
-        try:
-            if self._connection:
+        if self._connection:
+            try:
                 self._connection.close()
-        except pika.exceptions.StreamLostError:
-            print("Stream lost")
-        except (
-            pika.exceptions.ConnectionWrongStateError,
-            pika.exceptions.ConnectionClosedByBroker,
-        ):
-            print("Connection already closed")
+            except pika.exceptions.AMQPConnectionError:
+                print("Error when closing connection")
 
     def consumer_loop(self):
         self._connection = pika.BlockingConnection(
