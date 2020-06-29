@@ -48,12 +48,10 @@ class LoggingInterface(AsyncMessageCallback):
         self._log_thread.start()
 
     def stop_logging_loop(self):
-        self.msg_consumer.stop_consuming()
-
-        time.sleep(0.1)
-
         self._loop_running = False
         self._set_message_event()
+
+        self.msg_consumer.stop_consuming()
 
     def save_to_file(self, msg):
         # Save message to file using abstracted save method
