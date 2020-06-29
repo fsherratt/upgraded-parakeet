@@ -1,10 +1,11 @@
 import threading
 import time
+import sys
 
 import pika
 
 
-class rabbit_mq_generic:
+class rabbit_mq_common:
     def __init__(
         self,
         routing_key: str,
@@ -22,33 +23,38 @@ class rabbit_mq_generic:
         self._channel = None
 
     def open_exchange(self):
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self.host)
-        )
+        try:
+            self._connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host=self.host)
+            )
+        except pika.exceptions.AMQPConnectionError:
+            print("Connection failed: Is rabbitmq-server running", file=sys.stderr)
+            raise ConnectionRefusedError
+
         self._channel = self._connection.channel()
         self._channel.exchange_declare(
             exchange=self.exchange_key, exchange_type=self.exchange_type
         )
 
     def close_exchange(self):
-        print("Stopping production")
+        print("Closing exchange")
         if self._channel:
             try:
                 self._channel.stop_consuming()
-            except pika.exceptions.StreamLostError:
-                print("Stream lost")
+            except pika.exceptions.AMQPConnectionError as e:
+                print(e, file=sys.stderr)
 
-        # Delay gives time for stream to close
+        # # Delay gives time for stream to close
         time.sleep(0.1)
 
         if self._connection:
             try:
                 self._connection.close()
-            except pika.exceptions.AMQPConnectionError:
-                print("Error when closing connection")
+            except pika.exceptions.AMQPConnectionError as e:
+                print(e, file=sys.stderr)
 
 
-class consumer(rabbit_mq_generic):
+class consumer(rabbit_mq_common):
     def __init__(self, callback, **kwargs):
         super().__init__(**kwargs)
 
@@ -58,7 +64,7 @@ class consumer(rabbit_mq_generic):
     def start_consuming_thread(self):
         print("Starting production")
         self._rabbit_thread = threading.Thread(
-            target=self.consumer_loop, name="rabbit_mq_consumer"
+            target=self.consumer_loop, name="rabbit_mq_consumer", daemon=True
         )
         self._rabbit_thread.start()
 
@@ -88,7 +94,7 @@ class consumer(rabbit_mq_generic):
         self.callback(data)
 
 
-class producer(rabbit_mq_generic):
+class producer(rabbit_mq_common):
     def open_channel(self):
         self.open_exchange()
 
