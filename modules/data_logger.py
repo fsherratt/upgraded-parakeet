@@ -15,7 +15,7 @@ class LoggingInterface(AsyncMessageCallback):
         self._loop_running = True
         self._log_thread = None
 
-        self.msg_consumer = message_broker.consumer(
+        self.msg_consumer = message_broker.Consumer(
             callback=self.message_callback, routing_key="DEBUG", exchange_key="logger"
         )
 
@@ -89,7 +89,7 @@ class FileLogger(LoggingInterface):
 if __name__ == "__main__":
     file_log = FileLogger("telemetry")
 
-    msg_producer = message_broker.producer("logger", "DEBUG")
+    msg_producer = message_broker.Producer("logger", "DEBUG")
     msg_producer.open_channel()
 
     with file_log:

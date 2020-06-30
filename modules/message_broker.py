@@ -5,7 +5,7 @@ import sys
 import pika
 
 
-class rabbit_mq_common:
+class RabbitMQCommon:
     def __init__(
         self,
         routing_key: str,
@@ -41,20 +41,20 @@ class rabbit_mq_common:
         if self._channel:
             try:
                 self._channel.stop_consuming()
-            except pika.exceptions.AMQPConnectionError as e:
-                print(e, file=sys.stderr)
+            except pika.exceptions.AMQPConnectionError as error:
+                print(error, file=sys.stderr)
 
-        # # Delay gives time for stream to close
+        # Delay gives time for stream to close
         time.sleep(0.1)
 
         if self._connection:
             try:
                 self._connection.close()
-            except pika.exceptions.AMQPConnectionError as e:
-                print(e, file=sys.stderr)
+            except pika.exceptions.AMQPConnectionError as error:
+                print(error, file=sys.stderr)
 
 
-class consumer(rabbit_mq_common):
+class Consumer(RabbitMQCommon):
     def __init__(self, callback, **kwargs):
         super().__init__(**kwargs)
 
@@ -94,7 +94,7 @@ class consumer(rabbit_mq_common):
         self.callback(data)
 
 
-class producer(rabbit_mq_common):
+class Producer(RabbitMQCommon):
     def open_channel(self):
         self.open_exchange()
 
@@ -103,4 +103,3 @@ class producer(rabbit_mq_common):
 
     def close_channel(self):
         self.close_exchange()
-

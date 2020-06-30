@@ -4,6 +4,7 @@ from context import modules
 from unittest import TestCase, mock
 
 from modules.data_logger import LoggingInterface, FileLogger
+from modules import message_broker
 
 
 class TestDataLogger(TestCase):
@@ -71,20 +72,15 @@ class FileLog(TestCase):
         self.logObj.start_logging_loop()
 
         print("Starting test")
-        # Setup a rabbit mq publisher to test our logger recieves it correctly.
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host="localhost")
-        )
-        channel = connection.channel()
 
-        channel.exchange_declare(exchange="logger", exchange_type="direct")
-        print("Publishing connect...")
+        channel_obj = message_broker.Producer("logger", "DEBUG")
+        channel_obj.open_channel()
 
         time.sleep(0.1)
-        channel.basic_publish(exchange="logger", routing_key="DEBUG", body="Data")
+        channel_obj.send_message("Data")
         time.sleep(0.1)
 
-        connection.close()
+        channel_obj.close_channel()
 
         print("Check mock")
         mock_save.assert_called()
