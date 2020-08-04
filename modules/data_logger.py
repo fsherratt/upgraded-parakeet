@@ -1,10 +1,12 @@
-import threading
+import logging
 import sys
+import threading
 import time
 
-import logging
+from modules import message_broker
 
 from .async_message import AsyncMessageCallback
+
 
 class LoggingInterface(AsyncMessageCallback):
     def __init__(self):
@@ -12,6 +14,10 @@ class LoggingInterface(AsyncMessageCallback):
 
         self._loop_running = True
         self._log_thread = None
+
+        self.msg_consumer = message_broker.Consumer(
+            callback=self.message_callback, routing_key="DEBUG", exchange_key="logger"
+        )
 
     def __enter__(self):
         self.start_logging_loop()
@@ -36,28 +42,37 @@ class LoggingInterface(AsyncMessageCallback):
             self.save_to_file(msg)
 
     def start_logging_loop(self):
-        self._log_thread = threading.Thread(target=self.log_loop)
+        self.msg_consumer.start_consuming_thread()
+
+        self._log_thread = threading.Thread(target=self.log_loop, name="log_loop")
         self._log_thread.start()
 
     def stop_logging_loop(self):
         self._loop_running = False
         self._set_message_event()
 
+        self.msg_consumer.stop_consuming()
+
     def save_to_file(self, msg):
         # Save message to file using abstracted save method
         print(msg, file=sys.stdout)
+
 
 class FileLogger(LoggingInterface):
     def __init__(self, log_name, print_to_console=True):
         super().__init__()
 
         self.logger = logging.getLogger(log_name)
-        self.logger.setLevel(logging.DEBUG) # log everything
+        self.logger.setLevel(logging.DEBUG)  # log everything
 
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
-        log_directory = 'logs/'
-        log_filename = log_directory+ log_name + '_' + time.strftime("%Y%m%d-%H%M%S") + '.log'
+        log_directory = "logs/"
+        log_filename = (
+            log_directory + log_name + "_" + time.strftime("%Y%m%d-%H%M%S") + ".log"
+        )
 
         file_handle = logging.FileHandler(log_filename)
         file_handle.setLevel(logging.DEBUG)
@@ -70,13 +85,16 @@ class FileLogger(LoggingInterface):
             console_handle.setFormatter(formatter)
             self.logger.addHandler(console_handle)
 
-    def save_to_file(self, msg):
-        self.logger.debug(msg[1])
 
 if __name__ == "__main__":
-    file_log = FileLogger('telemetry')
+    file_log = FileLogger("telemetry")
+
+    msg_producer = message_broker.Producer("logger", "DEBUG")
+    msg_producer.open_channel()
 
     with file_log:
         for i in range(10):
-            file_log.message_callback(i)
-            time.sleep(1)
+            msg_producer.send_message(str(i))
+            time.sleep(0.1)
+
+    msg_producer.close_channel()
