@@ -5,6 +5,7 @@ Programmatically launch modules
 import argparse
 import select
 import subprocess
+import sys
 
 from modules import data_types, load_config
 
@@ -78,12 +79,12 @@ def parse_startup_yaml(config_file: str, current_startup_list=None) -> list:
 
     conf = load_config.from_file(config_file, use_cli_input=False)
 
-    for _ in conf.startup_list:
-        if not check_if_tag_known(_.module):
+    for startup_item in conf.startup_list:
+        if not check_if_tag_known(startup_item.module):
             continue
 
         current_startup_list.append(
-            load_config.conf_to_named_tuple(data_types.StartupItem, _)
+            load_config.conf_to_named_tuple(data_types.StartupItem, startup_item)
         )
 
     return current_startup_list
@@ -104,7 +105,7 @@ def parse_startup_cli(modules: list, current_startup_list=None) -> list:
             continue
 
         if len(module) > 1:
-            debug = bool(module[1] == "true" or module[1] == "True")
+            debug = module[1].upper() == "TRUE"
 
         if len(module) == 1:  # Only modules specified
             new_item = data_types.StartupItem(
@@ -173,7 +174,8 @@ def launch_processes(startup_items: list) -> list:
         new_process = launch_process(startup_item)
 
         if new_process is None:
-            continue
+            print("Failed to launch process {}".format(startup_item.module), sys.stderr)
+            # TODO: Log output of subprocess stderr
 
         process_list.append(new_process)
         print(
