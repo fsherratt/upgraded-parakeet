@@ -2,26 +2,30 @@
 Realsense stream connection modules - abstracts the pyrealsense API
 """
 import time
+from typing import NamedTuple
 
+import cv2
 import numpy as np
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
-from modules import data_types, load_config
+from modules import data_types, load_config, startup
 
 
 class RealsensePipeline:
     """
     Parent class for all realsense stream classes
     """
-    def __init__(self, config_file=None):
+
+    def __init__(self, config_file=None, debug=False):
         """
         Declare all the constants, tunable variables are public
         """
         # private
         self._pipe = None
-        self._object_name = 'Untitled'
+        self._object_name = "Untitled"
 
+        self.debug = debug
         self.conf = load_config.from_file(config_file)
 
     def __enter__(self):
@@ -36,7 +40,9 @@ class RealsensePipeline:
         """
         if traceback:
             print(traceback.tb_frame)
-            self._exception_handle("rs_pipeline: __exit__: `{}`".format(exception_value))
+            self._exception_handle(
+                "rs_pipeline: __exit__: `{}`".format(exception_value)
+            )
 
         self.close_connection()
 
@@ -50,13 +56,14 @@ class RealsensePipeline:
         try:
             self._pipe.start(cfg)
         except RuntimeError as raised_exception:
-            self._exception_handle("rs_pipeline:{}: failed to connect to camera"
-                                   .format(self._object_name))
+            self._exception_handle(
+                "rs_pipeline:{}: failed to connect to camera".format(self._object_name)
+            )
             raise raised_exception
 
         self._post_connect_process()
 
-        print('rs_pipeline:{}: Connection Open'.format(self._object_name))
+        print("rs_pipeline:{}: Connection Open".format(self._object_name))
 
     def close_connection(self):
         """
@@ -68,17 +75,20 @@ class RealsensePipeline:
         self._pipe.stop()
         self._pipe = None
 
-        print('rs_pipeline:{}: Connection Closed'.format(self._object_name))
+        print("rs_pipeline:{}: Connection Closed".format(self._object_name))
 
-    def wait_for_frame(self) -> tuple:
+    def wait_for_frame(self) -> NamedTuple:
         """
         Retrieve a data from the pipeline
         """
         try:
             frames = self._pipe.wait_for_frames()
         except RuntimeError as raised_exception:
-            self._exception_handle("rs_pipeline:{}:wait_for_frame: Timeout waiting for data frame"
-                                   .format(self._object_name))
+            self._exception_handle(
+                "rs_pipeline:{}:wait_for_frame: Timeout waiting for data frame".format(
+                    self._object_name
+                )
+            )
             raise raised_exception
 
         frame = self._get_frame(frames)
@@ -86,12 +96,18 @@ class RealsensePipeline:
         try:
             data = self._get_data(frame)
         except RuntimeError:
-            self._exception_handle("rs_pipeline:{}:wait_for_frame: Frame contained no data"
-                                   .format(self._object_name))
+            self._exception_handle(
+                "rs_pipeline:{}:wait_for_frame: Frame contained no data".format(
+                    self._object_name
+                )
+            )
             return None
 
         # Post Process
         data = self._post_process(data)
+
+        if self.debug:
+            self._debug_output(data)
 
         # End
         return data
@@ -133,15 +149,20 @@ class RealsensePipeline:
         """
         print(err)
 
+    def _debug_output(self, data):
+        raise NotImplementedError
+
+
 class DepthPipeline(RealsensePipeline):
     """
     D435 depth stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # private
-        self._object_name = self.conf.depth.object_name
+        self._object_name = self.conf.realsense.depth.object_name
 
         self._intrin = None
         self._fov = (0, 0)
@@ -151,11 +172,13 @@ class DepthPipeline(RealsensePipeline):
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
-        cfg.enable_stream(rs.stream.depth,
-                          self.conf.depth.width,
-                          self.conf.depth.height,
-                          rs.format.z16,
-                          self.conf.depth.framerate)
+        cfg.enable_stream(
+            rs.stream.depth,
+            self.conf.realsense.depth.width,
+            self.conf.realsense.depth.height,
+            rs.format.z16,
+            self.conf.realsense.depth.framerate,
+        )
         return cfg
 
     def _post_connect_process(self):
@@ -179,39 +202,60 @@ class DepthPipeline(RealsensePipeline):
         Get camera intrinsics
         """
         profile = self._pipe.get_active_profile()
+        sensor = profile.get_device().first_depth_sensor()
 
-        intrin = profile.get_stream(rs.stream.depth) \
-                        .as_video_stream_profile() \
-                        .get_intrinsics()
+        time.sleep(1)
+        sensor.set_option(
+            rs.option.visual_preset, self.conf.realsense.depth.visual_preset
+        )
 
-        scale = profile.get_device() \
-                        .first_depth_sensor() \
-                        .get_depth_scale()
+        intrin = (
+            profile.get_stream(rs.stream.depth)
+            .as_video_stream_profile()
+            .get_intrinsics()
+        )
 
-        self._intrin = data_types.Intrinsics(scale, intrin.ppx, intrin.ppy, intrin.fx, intrin.fy)
+        scale = sensor.get_depth_scale()
+
+        self._intrin = data_types.Intrinsics(
+            scale, intrin.ppx, intrin.ppy, intrin.fx, intrin.fy
+        )
 
         self._fov = rs.rs2_fov(intrin)
+
+    def _debug_output(self, data: data_types.Depth):
+        depth = data.depth * data.intrin.scale
+        depth = cv2.applyColorMap(
+            cv2.convertScaleAbs(depth, alpha=75), cv2.COLORMAP_JET
+        )
+
+        cv2.imshow("realsense_depth", depth)
+        cv2.waitKey(1)
+
 
 class ColorPipeline(RealsensePipeline):
     """
     D435 RGB color stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # private
-        self._object_name = self.conf.color.object_name
+        self._object_name = self.conf.realsense.color.object_name
 
     def wait_for_frame(self) -> data_types.Color:
         return super().wait_for_frame()
 
     def _generate_config(self) -> rs.config:
         cfg = rs.config()
-        cfg.enable_stream(rs.stream.color,
-                          self.conf.color.width,
-                          self.conf.color.height,
-                          rs.format.bgr8,
-                          self.conf.color.framerate)
+        cfg.enable_stream(
+            rs.stream.color,
+            self.conf.realsense.color.width,
+            self.conf.realsense.color.height,
+            rs.format.bgr8,
+            self.conf.realsense.color.framerate,
+        )
         return cfg
 
     def _get_frame(self, frames: rs.composite_frame):
@@ -222,15 +266,21 @@ class ColorPipeline(RealsensePipeline):
 
         return data_types.Color(time.time(), image)
 
+    def _debug_output(self, data: data_types.Color):
+        cv2.imshow("realsense_color", data.image)
+        cv2.waitKey(1)
+
+
 class PosePipeline(RealsensePipeline):
     """
     T265 pose stream realsense class
     """
-    def __init__(self, config_file='conf/realsense.yaml'):
-        super().__init__(config_file)
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
 
         # Private
-        self._object_name = self.conf.pose.object_name
+        self._object_name = self.conf.realsense.pose.object_name
 
         self._north_offset_deg = 0
         self._tilt_deg = 0
@@ -238,7 +288,7 @@ class PosePipeline(RealsensePipeline):
         self.h_aeroref_t265ref = None
         self.h_t265body_aerobody = None
 
-        self.set_tilt_offset(self.conf.pose.tilt_deg)
+        self.set_tilt_offset(self.conf.realsense.pose.tilt_deg)
 
     def wait_for_frame(self) -> data_types.Pose:
         return super().wait_for_frame()
@@ -263,14 +313,9 @@ class PosePipeline(RealsensePipeline):
         return frame.get_pose_data()
 
     def _post_process(self, data):
-        pos = [data.translation.x,
-               data.translation.y,
-               data.translation.z]
+        pos = [data.translation.x, data.translation.y, data.translation.z]
 
-        quat = [data.rotation.x,
-                data.rotation.y,
-                data.rotation.z,
-                data.rotation.w]
+        quat = [data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w]
 
         quat = self._convert_rotational_frame(quat)
         pos = self._convert_positional_frame(pos)
@@ -281,9 +326,9 @@ class PosePipeline(RealsensePipeline):
         """
         Initialise rotational transforms between tilted T265 and NED aero body and ref frames
         """
-        h_aeroNEDref_aeroref = R.from_euler('z', self._north_offset_deg, degrees=True)
+        h_aeroNEDref_aeroref = R.from_euler("z", self._north_offset_deg, degrees=True)
         h_aeroref_t265ref = R.from_matrix([[0, 0, -1], [1, 0, 0], [0, -1, 0]])
-        h_t265tilt_t265body = R.from_euler('x', self._tilt_deg, degrees=True)
+        h_t265tilt_t265body = R.from_euler("x", self._tilt_deg, degrees=True)
 
         self.h_aeroref_t265ref = h_aeroNEDref_aeroref * h_aeroref_t265ref
         self.h_t265body_aerobody = h_t265tilt_t265body * h_aeroref_t265ref.inv()
@@ -292,7 +337,7 @@ class PosePipeline(RealsensePipeline):
         """
         Convert T265 rotational frame to aero NED frame
         """
-        rot = self.h_aeroref_t265ref * R.from_quat(quat)  * self.h_t265body_aerobody
+        rot = self.h_aeroref_t265ref * R.from_quat(quat) * self.h_t265body_aerobody
 
         return rot.as_quat()
 
@@ -301,3 +346,66 @@ class PosePipeline(RealsensePipeline):
         Convert T265 translation frame to aero NED translation
         """
         return self.h_aeroref_t265ref.apply(pos)
+
+    def _debug_output(self, data: data_types.Pose):
+        print(
+            "Pos:{}\tQuat:{}\tConf:{}".format(
+                data.translation, data.quaternion, data.conf
+            )
+        )
+
+
+class RealsenseRunner(startup.Startup):
+    """
+    Setup and run class for realsense objects
+    """
+
+    def __init__(
+        self, realsense_object: RealsensePipeline, kwargs, process_tag="rs_generic",
+    ):
+        super().__init__(process_tag)
+        self._realsense = realsense_object.__new__(realsense_object)
+        self._realsense.__init__(**kwargs)
+
+    def module_startup(self):
+        self._realsense.open_connection()
+
+    def module_loop(self):
+        # Pass frame to rabbit mq
+        self._realsense.wait_for_frame()
+
+    def module_shutdown(self):
+        self._realsense.close_connection()
+
+
+if __name__ == "__main__":
+    args = startup.Startup.parse_cli_input()
+
+    modules = {
+        "rs_depth": DepthPipeline,
+        "rs_pose": PosePipeline,
+        "rs_color": ColorPipeline,
+    }
+
+    try:
+        PTAG = args.options[0]
+        PTYPE = modules[PTAG]
+    except KeyError:
+        raise RuntimeError("Unknowm module options `-o {}`".format(args.options))
+
+    object_arguments = {}
+
+    if args.config is not None:
+        object_arguments["config_file"] = args.config
+
+    if args.debug is not None:
+        object_arguments["debug"] = args.debug
+
+    if args.process_tag is not None:
+        PTAG = args.process_tag
+
+    runner = RealsenseRunner(
+        realsense_object=PTYPE, process_tag=PTAG, kwargs=object_arguments,
+    )
+
+    runner.run(health_monitoring=args.health_monitor)
