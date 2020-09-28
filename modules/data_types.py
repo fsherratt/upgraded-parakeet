@@ -59,3 +59,31 @@ class StartupItem(NamedTuple):
     process_tag: str
     debug: bool
     health_monitor: bool
+
+
+class Arduino_Heartbeat(NamedTuple):
+    timestamp: int
+    mode: int
+    brightness: int
+    strobe_enable: bool
+    nav_enable: bool
+
+
+class Arduino_Command(NamedTuple):
+    cmd: int
+    action: int
+
+
+class Telemetry_Message(NamedTuple):
+    addr_route: str
+    addr_exch: str
+    data: bytes
+
+
+class Message_Wrapper(NamedTuple):
+    node_id: str
+    seq_id: int
+    addr_route: str
+    addr_exch: str
+    data_size: int
+    data: bytes
