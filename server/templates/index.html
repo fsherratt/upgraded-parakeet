@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
+  <meta name="generator" content="Jekyll v4.1.1">
+  <title>Dashboard Template · Bootstrap</title>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/bootstrap.min.css')}}">
+  <!-- Custom styles for this template -->
+  <link href="{{ url_for('static', filename='dashboard.css')}}" rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="#">TeamBathDrones</a>
+    <button type="button" id="btn-connected"
+      class="btn btn-secondary btn-sm col-md-3 col-lg-2 mr-md-3">Disconnected</button>
+    <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-toggle="collapse"
+      data-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <div class="sidebar-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" href="#">
+                <span data-feather="home"></span>
+                Dashboard <span class="sr-only">(current)</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">
+                <span data-feather="file"></span>
+                Console
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+        <div
+          class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Dashboard</h1>
+        </div>
+
+        <div class="container-fluid border-bottom pb-2">
+          <div class="row mb-1">
+            <h3>LED Controls</h3>
+          </div>
+          <div class="row">
+            <div class="col-sm pb-2">
+              <button type="button" class="click btn btn-secondary btn-block" data-toggle="button"
+                data-button-id="led_on-off_toggle">Toggle On/Off</button>
+            </div>
+            <div class="col-sm pb-2">
+              <button type="button" class="click btn btn-secondary btn-block" data-button-id="led_strobe_toggle">Toggle
+                Strobe</button>
+            </div>
+            <div class="col-sm pb-2">
+              <button type="button" class="click btn btn-primary btn-block" data-button-id="led_nav_toggle">Toggle
+                Nav</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script asycn src="{{ url_for('static', filename='js/jquery-3.5.1.min.js')}}"></script>
+  <script asycn src="{{ url_for('static', filename='js/popper.min.js')}}"></script>
+  <script asycn src="{{ url_for('static', filename='js/bootstrap.min.js')}}"></script>
+  <script asycn src="{{ url_for('static', filename='js/socket.io.js')}}"></script>
+</body>
+
+<script type="text/javascript" charset="utf-8">
+  var socket = io.connect('http://' + document.domain + ':' + location.port);
+  var tid = null
+
+  socket.heatbeatTimeout = 5000
+
+  socket.on('connect', function () {
+    console.log('Connected to server')
+
+    $('#btn-connected').removeClass('btn-secondary').addClass('btn-info').html("Connected");
+  });
+
+  socket.on('disconnect', function () {
+    console.log('Disconnected from server')
+    $('#btn-connected').removeClass('btn-info').addClass('btn-secondary').html("Disconnected");
+  })
+
+  socket.on('incoming_message', function (msg) {
+    console.log(msg)
+  })
+
+  $('.click').click(function (event) {
+    var $name = $(this).data('button-id')
+
+    socket.emit('button_click', { id: $name });
+    console.log("Selected ID:" + $name);
+  })
+</script>
+
+</html>
