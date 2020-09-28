@@ -1,0 +1,57 @@
+version: "3.5"
+
+services:
+  rabbitmq:
+    build: ./rabbitmq
+
+    hostname: rabbitmq
+
+    expose:
+      - "5672" # Rabbitmq port
+
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  udp_broker:
+    build: ./udp_broker
+
+    # ports:
+    #   - "4005:4005/udp" # UDP outgoing
+    #   - "4006:4006/udp" # UDP incoming
+
+    network_mode: host
+    hostname: udp_broker
+
+    environment:
+      RABBITMQ_HOST: localhost
+
+    restart: on-failure
+
+    depends_on:
+      - rabbitmq
+
+    expose:
+      - "5672"
+
+    volumes:
+      - ../:/app
+
+    command: "python3 -m modules.udp_broker -in 4006 -out 4005"
+
+  flask:
+    build: ./flask_server
+
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    
+    expose: 
+      - "5672"
+      
+    ports:
+      - "0.0.0.0:80:5000" # Web app
+
+    volumes:
+      - ../:/app
+
+    command: "python3 -m server.server"

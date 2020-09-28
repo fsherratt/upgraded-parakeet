@@ -1,0 +1,17 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.140.1/containers/docker-existing-dockerfile
+{
+	"name": "Flask Server",
+	"dockerComposeFile": [
+		"../docker-compose.gcs.yml",
+		"../docker-compose.gcs-dev.yml"
+	],
+	"service": "flask",
+	"shutdownAction": "none",
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-azuretools.vscode-docker",
+		"ms-python.python"
+	],
+	"workspaceFolder": "/app",
+}

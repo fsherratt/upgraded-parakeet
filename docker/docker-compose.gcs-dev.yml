@@ -1,0 +1,8 @@
+version: "3.5"
+
+services:
+  flask:
+    command: /bin/sh -c "while sleep 1000; do :; done"
+
+  udp_broker:
+    command: /bin/sh -c "while sleep 1000; do :; done"
