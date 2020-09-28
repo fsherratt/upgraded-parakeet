@@ -1,8 +1,10 @@
 import threading
 import time
 import sys
+import threading
 
 import pika
+import pickle
 
 
 class RabbitMQCommon:
@@ -79,27 +81,48 @@ class Consumer(RabbitMQCommon):
 
         # Specific setup
         self._channel.queue_bind(
-            exchange=self.exchange_key, queue=queue_name, routing_key=self.routing_key,
+            exchange=self.exchange_key,
+            queue=queue_name,
+            routing_key=self.routing_key,
         )
         self._channel.basic_consume(
-            queue=queue_name, on_message_callback=self.message_callback, auto_ack=True,
+            queue=queue_name,
+            on_message_callback=self.message_callback,
+            auto_ack=True,
         )
 
         try:
             self._channel.start_consuming()
+        except pika.exceptions.ConnectionClosed:
+            print("Connection closed")
+            # TODO: dp something with this information
+
         except pika.exceptions.StreamLostError:
             print("Stream Lost")
 
     def message_callback(self, channel, method, properties, data):
+        data = pickle.loads(data)
         self.callback(data)
 
 
 class Producer(RabbitMQCommon):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self._write_lock = threading.Lock()
+
     def open_channel(self):
         self.open_exchange()
 
     def send_message(self, msg):
-        self._channel.basic_publish(exchange="logger", routing_key="DEBUG", body=msg)
+        msg = pickle.dumps(msg)
+        try:
+            self._write_lock.acquire()
+            self._channel.basic_publish(
+                exchange=self.exchange_key, routing_key=self.routing_key, body=msg
+            )
+        finally:
+            self._write_lock.release()
 
     def close_channel(self):
         self.close_exchange()
