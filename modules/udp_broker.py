@@ -6,7 +6,7 @@ import pickle
 import time
 from typing import NamedTuple
 
-from modules import message_broker, udp
+from modules import message_broker, udp, data_types
 from modules.data_types import *
 
 
@@ -104,7 +104,7 @@ class OutgoingMessages:
         self._consumer.start_consuming_thread()
 
     def message_callback(self, msg):
-        print(msg, flush=True)
+        print("Time: {}\t Msg: {}".format(int(time.time() * 1000), msg), flush=True)
         self._udp_out.send_udp_message(msg)
 
 
@@ -149,11 +149,13 @@ if __name__ == "__main__":
     print("Starting", flush=True)
     rbMQ_host = os.environ.get("RABBITMQ_HOST")
     # Incoming broker messages are in background thread
+
     telemtry_out = OutgoingMessages(
         listen_exchange="telemetry",
-        listen_route="ground",
+        listen_route="copter",
         udp_port=4005,
-        udp_host="255.255.255.255",
+        udp_host="192.168.137.255",
+        # udp_host="255.255.255.255",
         rabbit_host=rbMQ_host,
     )
     telemtry_out.start_listenting()
