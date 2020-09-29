@@ -3,14 +3,14 @@ import pyrealsense2 as rs
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from context import modules
+from __context import modules, definitions
+from definitions import data_types
 from modules.realsense import (
     RealsensePipeline,
     DepthPipeline,
     ColorPipeline,
     PosePipeline,
 )
-from modules import data_types
 
 
 class TestRSPipeline(TestCase):

@@ -1,8 +1,8 @@
 import time
 
-from context import modules
 from unittest import TestCase, mock
 
+from __context import modules
 from modules.data_logger import LoggingInterface, FileLogger
 from modules import message_broker
 

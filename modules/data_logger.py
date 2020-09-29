@@ -3,12 +3,10 @@ import sys
 import threading
 import time
 
-from modules import message_broker
-
-from .async_message import AsyncMessageCallback
+from utils import AsyncMessageCallback, message_broker
 
 
-class LoggingInterface(AsyncMessageCallback):
+class LoggingInterface(async_message.AsyncMessageCallback):
     def __init__(self):
         super().__init__()
 
