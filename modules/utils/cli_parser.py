@@ -16,7 +16,6 @@ def standard_parser() -> argparse.ArgumentParser:
         "-P",
         "--process",
         type=str,
-        nargs="1",
         required=True,
         help="Realsense stream type to launch",
     )

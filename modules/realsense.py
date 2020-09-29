@@ -74,8 +74,12 @@ class RealsensePipeline:
         if self._pipe is None:
             return
 
-        self._pipe.stop()
-        self._pipe = None
+        try:
+            self._pipe.stop()
+        except RuntimeError:
+            pass
+        finally:
+            self._pipe = None
 
         print("rs_pipeline:{}: Connection Closed".format(self._object_name))
 
@@ -372,6 +376,7 @@ if __name__ == "__main__":
     if cli_args.debug is not None:
         object_arguments["debug"] = cli_args.debug
 
+    realsense = None
     # Setup realsense object
     if cli_args.process == "rs_depth":
         realsense = DepthPipeline(**object_arguments)
@@ -379,6 +384,8 @@ if __name__ == "__main__":
         realsense = ColorPipeline(**object_arguments)
     elif cli_args.process == "rs_pose":
         realsense = PosePipeline(**object_arguments)
+    else:
+        raise Warning("Incorrect realsense module specified")
 
     # Open connection and stream data
     try:
