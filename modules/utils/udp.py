@@ -1,3 +1,6 @@
+"""
+This module contains a abstraction for forming a UDP connection
+"""
 import threading
 import socket
 import traceback

@@ -5,9 +5,12 @@ import os
 import pickle
 import time
 from typing import NamedTuple
+import sys
 
-from modules import message_broker, udp, data_types
-from modules.data_types import *
+from modules.utils import message_broker, udp
+
+from modules.__context import definitions
+from definitions import data_types
 
 
 class UdpSender:
@@ -26,12 +29,12 @@ class UdpSender:
         self._socket.closePort()
 
     def send_udp_message(self, msg):
-        if not isinstance(msg, Telemetry_Message):
+        if not isinstance(msg, data_types.Telemetry_Message):
             raise Warning(
                 "Message must be of type Message_Wrapper not {}".format(type(msg))
             )
 
-        wrapped_msg = Message_Wrapper(
+        wrapped_msg = data_types.Message_Wrapper(
             node_id=self._node,
             seq_id=self._seq,
             addr_route=msg.addr_route,
@@ -58,7 +61,7 @@ class UdpReciever:
     def closeSocket(self):
         self._socket.closePort()
 
-    def wait_for_message(self, output_type=Message_Wrapper):
+    def wait_for_message(self, output_type=data_types.Message_Wrapper):
         msg = self._socket.read()
         return self._decode_udp_message(msg)
 
@@ -105,7 +108,10 @@ class OutgoingMessages:
 
     def message_callback(self, msg):
         print("Time: {}\t Msg: {}".format(int(time.time() * 1000), msg), flush=True)
-        self._udp_out.send_udp_message(msg)
+        try:
+            self._udp_out.send_udp_message(msg)
+        except Exception as e:
+            print(e, flush=True, file=sys.stdout)
 
 
 class IncomingMessages:
@@ -126,7 +132,7 @@ class IncomingMessages:
         incoming = self._udp_in.wait_for_message()
         return incoming
 
-    def route(self, msg: Message_Wrapper):
+    def route(self, msg: data_types.Message_Wrapper):
         try:
             routing_key = msg.addr_route
             routing_exc = msg.addr_exch

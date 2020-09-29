@@ -4,21 +4,21 @@ import queue
 import time
 import threading
 import sys
+import select
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 
-from modules import message_broker, data_types
-from modules.led_interface import Commands as LED_Commands
+from server.__context import definitions, modules
+from definitions import enums, data_types
+
+from modules.utils import message_broker, async_message
 
 
 class server:
-    def __init__(self, recv_callback):
+    def __init__(self):
         self._host = "0.0.0.0"
         self._port = 5000
-        self._recv_callback = recv_callback
-
-        self._socket_thread = None
 
         self._app = Flask(__name__)
         self._app.config["SECRET_KEY"] = "secret!"
@@ -32,6 +32,9 @@ class server:
         self._attach_pages()
         self._attach_events()
 
+        self._recv_callback = None  # Web_app -> Interpreter
+        self._socket_thread = None
+
     def _attach_pages(self):
         @self._app.route("/")
         def index(name=None):
@@ -43,11 +46,16 @@ class server:
             self._recieve(msg=data)
 
     def _recieve(self, msg):
+        if self._recv_callback is None:
+            return
+
         self._recv_callback(msg)
+
+    def set_recv_callback(self, recv_callback):
+        self._recv_callback = recv_callback
 
     def emit(self, event: str, msg: dict):
         self._socketio.emit(event, msg)
-        time.sleep(1)
 
     def start(self, debug=False):
         self._socketio.run(app=self._app, host=self._host, port=self._port, debug=debug)
@@ -69,23 +77,28 @@ class server:
 class telemtry_consumer:
     def __init__(
         self,
-        recv_callback,
-        listen_route: str,
-        listen_exchange: str,
-        rabbit_host="localhost",
+        exchange: str,
+        route: str,
+        hostname="localhost",
     ):
-        self.message_callback = recv_callback
+        self.message_callback = None
 
-        self._listen_route = listen_route
-        self._listen_exchange = listen_exchange
-        self._rabbit_host = rabbit_host
+        self._listen_exchange = exchange
+        self._listen_route = route
+        self._rabbit_host = hostname
 
         self._consumer = None
+
+    def set_recv_callback(self, recv_callback):
+        self.message_callback = recv_callback
 
     def stop_listening(self):
         self._consumer.stop_consuming()
 
     def start_listenting(self):
+        if self.message_callback is None:
+            raise Warning("Message callback not yet set")
+
         self._consumer = message_broker.Consumer(
             callback=self.message_callback,
             routing_key=self._listen_route,
@@ -95,49 +108,18 @@ class telemtry_consumer:
         self._consumer.start_consuming_thread()
 
 
-class telemetry_udp_to_web_app:
-    """
-    Recieve incoming telemetry data and send
-    to the correct socket_io event
-    """
-
-    def __init__(self, emit_handler, route: str, exch: str, host: str):
-        self._consumer = None
+class telemetry_producer:
+    def __init__(
+        self,
+        exchange: str,
+        route: str,
+        hostname="localhost",
+    ):
         self._route = route
-        self._exch = exch
-        self._host = host
+        self._exch = exchange
+        self._host = hostname
 
-    def start(self):
-        self._setup_rabbitmq_consumer()
-
-    def stop(self):
-        if self._consumer is not None:
-            self._consumer.stop_consuming()
-
-    def _setup_rabbitmq_consumer(self):
-        self._consumer = telemtry_consumer(
-            recv_callback=self.recv_handler,
-            listen_route=self._route,
-            listen_exchange=self._exch,
-            rabbit_host=self._host,
-        )
-        self._consumer.start_listenting()
-
-    def recv_handler(self, msg):
-        print("Msg: {}".format(msg))
-
-
-class telemetry_web_app_to_udp:
-    """
-    Forward commands from the webapp and send
-    to the correct vehicle rabbitmq channel
-    """
-
-    def __init__(self, route: str, exch: str, host: str):
         self._producer = None
-        self._route = route
-        self._exch = exch
-        self._host = host
 
     def start(self):
         self._setup_rabbitmq_producer()
@@ -157,69 +139,121 @@ class telemetry_web_app_to_udp:
         )
         self._producer.open_channel()
 
-    def _send_test_data(self):
-        data = data_types.Telemetry_Message(
-            addr_route="test_route", addr_exch="test_exch", data="Hello, World!"
-        )
-        self.send_message(data)
 
-    def recv_handler(self, msg):
+class Interpreter:
+    def __init__(self, out_handle):
+        self._out_handle = out_handle
+        self._msg_queue = async_message.AsyncMessageCallback()
+
+        self._running = True
+        self._thread = None
+
+    def stop(self):
+        self._msg_queue.unblock_wait()
+
+    def queue_command(self, command):
+        self._msg_queue.queue_message(command)
+
+    def start_thread(self):
+        self._thread = threading.Thread(target=self.process_queue)
+        self._thread.start()
+
+    def stop_thead(self):
+        self._running = False
+        self._msg_queue.unblock_wait()
+
+    def process_queue(self):
+        while self._running:
+            _, msg = self._msg_queue.wait_for_message()
+
+            if msg is None:
+                continue
+
+            self.interpret_msg(msg)
+
+    def interpret_msg(self, msg):
+        return
+
+
+class rabbit_to_web_app(Interpreter):
+    """
+    Recieve incoming telemetry data and send
+    to the correct socket_io event
+    """
+
+    def interpret_msg(self, msg):
+        print(msg, file=sys.stdout, flush=True)
+        self._out_handle("A", msg)
+
+
+class web_app_to_rabbit(Interpreter):
+    """
+    Forward commands from the webapp and send
+    to the correct vehicle rabbitmq channel
+    """
+
+    def interpret_msg(self, msg):
+        print(msg, file=sys.stdout, flush=True)
+
+        rtn_msg = None
+
         if msg["id"] == "led_on-off_toggle":
-            cmd = data_types.Arduino_Command(
-                cmd=LED_Commands.SET_LED_MODE,
-                action=LED_Commands.MODE_INITIALISING,
+            rtn_msg = data_types.Telemetry_Message(
+                addr_exch="arduino", addr_route="all", data="On"
             )
-            data = data_types.Telemetry_Message(
-                addr_route="all", addr_exch="led", data=cmd
-            )
-            self.send_message(data)
-
         elif msg["id"] == "led_strobe_toggle":
-            cmd = data_types.Arduino_Command(
-                cmd=LED_Commands.SET_LED_MODE,
-                action=LED_Commands.MODE_OFF,
+            rtn_msg = data_types.Telemetry_Message(
+                addr_exch="arduino", addr_route="all", data="Strobe"
             )
-            data = data_types.Telemetry_Message(
-                addr_route="all", addr_exch="led", data=cmd
-            )
-            self.send_message(data)
-
         elif msg["id"] == "led_nav_toggle":
-            data = data_types.Telemetry_Message(
-                addr_route="test_route", addr_exch="test_exch", data="Toggle Nav"
+            rtn_msg = data_types.Telemetry_Message(
+                addr_exch="arduino", addr_route="all", data="Nav"
             )
-            self.send_message(data)
-
         else:
-            print("Msg: {}".format(msg))
+            return
+
+        self._out_handle(rtn_msg)
 
 
 if __name__ == "__main__":
+    # Setup input and output nodes
     rbMQ_host = os.environ.get("RABBITMQ_HOST")
 
-    telem_out = telemetry_web_app_to_udp(
-        exch="telemetry", route="copter", host=rbMQ_host
+    flask_server = server()
+    telem_in = telemtry_consumer(
+        exchange="telemetry", route="ground", hostname=rbMQ_host
+    )
+    telem_out = telemetry_producer(
+        exchange="telemetry", route="copter", hostname=rbMQ_host
     )
 
-    flask_server = server(recv_callback=telem_out.recv_handler)
-    flask_server.start_as_thread()
+    # Setup interpreters
+    web_interpreter = web_app_to_rabbit(out_handle=telem_out.send_message)
+    rabbit_interpreter = rabbit_to_web_app(out_handle=flask_server.emit)
 
-    telem_in = telemetry_udp_to_web_app(
-        emit_handler=flask_server.emit, exch="telemetry", route="ground", host=rbMQ_host
-    )
+    # Link end nodes to interperters
+    flask_server.set_recv_callback(web_interpreter.queue_command)
+    telem_in.set_recv_callback(rabbit_interpreter.queue_command)
 
     try:
-        telem_in.start()
+        flask_server.start_as_thread()
+        telem_in.start_listenting()
         telem_out.start()
+
+        web_interpreter.start_thread()
+        rabbit_interpreter.start_thread()
 
         while True:
             time.sleep(1)
-            # telem_out._send_test_data()
 
     except KeyboardInterrupt:
         pass
 
     finally:
-        telem_in.stop()
+        telem_in.stop_listening()
         telem_out.stop()
+
+        web_interpreter.stop_thead()
+        rabbit_interpreter.stop_thead()
+
         print("Exiting")

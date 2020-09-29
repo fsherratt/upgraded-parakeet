@@ -20,14 +20,15 @@ class AsyncMessageCallback:
         Blocking message retrieval
         """
         self._new_message_event.wait(timeout=self._wait_timeout)
+        time = 0
         msg = None
 
         try:
-            msg = self._message_queue.get_nowait()
+            time, msg = self._message_queue.get_nowait()
         except queue.Empty:
             self._clear_message_event()
 
-        return msg
+        return time, msg
 
     def queue_message(self, data):
         """
