@@ -1,14 +1,14 @@
-from context import modules
 from unittest import TestCase
-
 from typing import NamedTuple
-from modules.load_config import from_file, conf_to_named_tuple
+
+from __context import modules
+from modules.utils.load_config import from_file, conf_to_named_tuple
 
 
 class TestLoadConfig(TestCase):
     def setUp(self):
-        self.test_filename = "conf/test.yaml"
-        self.test_invalid_filename = "conf/not_a_file.yaml"
+        self.test_filename = "tests/test.yaml"
+        self.test_invalid_filename = "tests/not_a_file.yaml"
 
         self.test_value = 10
 

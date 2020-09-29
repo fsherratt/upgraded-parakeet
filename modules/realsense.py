@@ -2,14 +2,16 @@
 Realsense stream connection modules - abstracts the pyrealsense API
 """
 import time
-from typing import NamedTuple
 
 import cv2
 import numpy as np
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 
-from modules import data_types, load_config, startup
+from modules.utils import load_config, cli_parser
+
+from modules.__context import definitions
+from definitions import data_types
 
 
 class RealsensePipeline:
@@ -72,12 +74,16 @@ class RealsensePipeline:
         if self._pipe is None:
             return
 
-        self._pipe.stop()
-        self._pipe = None
+        try:
+            self._pipe.stop()
+        except RuntimeError:
+            pass
+        finally:
+            self._pipe = None
 
         print("rs_pipeline:{}: Connection Closed".format(self._object_name))
 
-    def wait_for_frame(self) -> NamedTuple:
+    def wait_for_frame(self) -> tuple:
         """
         Retrieve a data from the pipeline
         """
@@ -355,57 +361,43 @@ class PosePipeline(RealsensePipeline):
         )
 
 
-class RealsenseRunner(startup.Startup):
-    """
-    Setup and run class for realsense objects
-    """
-
-    def __init__(
-        self, realsense_object: RealsensePipeline, kwargs, process_tag="rs_generic",
-    ):
-        super().__init__(process_tag)
-        self._realsense = realsense_object.__new__(realsense_object)
-        self._realsense.__init__(**kwargs)
-
-    def module_startup(self):
-        self._realsense.open_connection()
-
-    def module_loop(self):
-        # Pass frame to rabbit mq
-        self._realsense.wait_for_frame()
-
-    def module_shutdown(self):
-        self._realsense.close_connection()
-
-
 if __name__ == "__main__":
-    args = startup.Startup.parse_cli_input()
+    cli_args = cli_parser.parse_cli_input()
 
-    modules = {
-        "rs_depth": DepthPipeline,
-        "rs_pose": PosePipeline,
-        "rs_color": ColorPipeline,
-    }
-
-    try:
-        PTAG = args.options[0]
-        PTYPE = modules[PTAG]
-    except KeyError:
-        raise RuntimeError("Unknowm module options `-o {}`".format(args.options))
-
+    # CLI arguments are optional, a keyword argument dictionary is the
+    # simplest way to achieve optional arguments without overriding defaults
     object_arguments = {}
 
-    if args.config is not None:
-        object_arguments["config_file"] = args.config
+    if cli_args.config is not None:
+        object_arguments["config_file"] = cli_args.config
+    else:
+        object_arguments["config_file"] = "conf/realsense.yaml"
 
-    if args.debug is not None:
-        object_arguments["debug"] = args.debug
+    if cli_args.debug is not None:
+        object_arguments["debug"] = cli_args.debug
 
-    if args.process_tag is not None:
-        PTAG = args.process_tag
+    realsense = None
+    # Setup realsense object
+    if cli_args.process == "rs_depth":
+        realsense = DepthPipeline(**object_arguments)
+    elif cli_args.process == "rs_color":
+        realsense = ColorPipeline(**object_arguments)
+    elif cli_args.process == "rs_pose":
+        realsense = PosePipeline(**object_arguments)
+    else:
+        raise Warning("Incorrect realsense module specified")
 
-    runner = RealsenseRunner(
-        realsense_object=PTYPE, process_tag=PTAG, kwargs=object_arguments,
-    )
+    # Open connection and stream data
+    try:
+        realsense.open_connection()
 
-    runner.run(health_monitoring=args.health_monitor)
+        while True:
+            data = realsense.wait_for_frame()
+            # TODO: add in data streaming
+
+    except KeyboardInterrupt:
+        pass
+
+    # Clean up and close
+    finally:
+        realsense.close_connection()
