@@ -73,7 +73,9 @@ class FileLog(TestCase):
 
         print("Starting test")
 
-        channel_obj = message_broker.Producer("logger", "DEBUG")
+        channel_obj = message_broker.Producer(
+            exchange_key="logger", routing_key="DEBUG"
+        )
         channel_obj.open_channel()
 
         time.sleep(0.1)
