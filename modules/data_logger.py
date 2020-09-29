@@ -3,7 +3,7 @@ import sys
 import threading
 import time
 
-from utils import AsyncMessageCallback, message_broker
+from modules.utils import async_message, message_broker
 
 
 class LoggingInterface(async_message.AsyncMessageCallback):

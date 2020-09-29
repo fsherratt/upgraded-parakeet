@@ -22,7 +22,7 @@ class TestMap(TestCase):
         )
         self.map = Map(map_def=map_def)
 
-    @mock.patch("modules.async_message.AsyncMessageCallback.wait_for_message")
+    @mock.patch("modules.utils.async_message.AsyncMessageCallback.wait_for_message")
     def test_map_update(self, mock_wait):
         """
         Test addition of voxel data to the map

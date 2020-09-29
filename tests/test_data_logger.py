@@ -4,7 +4,7 @@ from unittest import TestCase, mock
 
 from __context import modules
 from modules.data_logger import LoggingInterface, FileLogger
-from modules import message_broker
+from modules.utils import message_broker
 
 
 class TestDataLogger(TestCase):
@@ -14,7 +14,7 @@ class TestDataLogger(TestCase):
     def tearDown(self):
         self.logObj.stop_logging_loop()
 
-    @mock.patch("modules.async_message.AsyncMessageCallback.queue_message")
+    @mock.patch("modules.utils.async_message.AsyncMessageCallback.queue_message")
     def test_logging_queue_put(self, mock_fcn):
         data = "Data"
         self.logObj.message_callback(data)
