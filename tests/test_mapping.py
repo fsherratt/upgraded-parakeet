@@ -2,27 +2,39 @@ from unittest import TestCase, mock
 
 import numpy as np
 
-from context import modules
-from modules import data_types
+from __context import modules, definitions
+from definitions import data_types
 from modules.mapping import Map
 
 
 class TestMap(TestCase):
     def setUp(self):
-        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
-                                           x_max=1, y_max=1, z_max=1,
-                                           x_divisions=10, y_divisions=10, 
-                                           z_divisions=10)
+        map_def = data_types.MapDefinition(
+            x_min=-1,
+            y_min=-1,
+            z_min=-1,
+            x_max=1,
+            y_max=1,
+            z_max=1,
+            x_divisions=10,
+            y_divisions=10,
+            z_divisions=10,
+        )
         self.map = Map(map_def=map_def)
 
-    @mock.patch('modules.async_message.AsyncMessageCallback.wait_for_message')
+    @mock.patch("modules.utils.async_message.AsyncMessageCallback.wait_for_message")
     def test_map_update(self, mock_wait):
         """
         Test addition of voxel data to the map
         """
         mock_voxels = ((0, 0), (0, 0), (0, 1))
         mock_count = [1, 2]
-        mock_wait.return_value = (0, data_types.MapPreProcessorOut(0, np.asarray(mock_voxels).transpose(), mock_count))
+        mock_wait.return_value = (
+            0,
+            data_types.MapPreProcessorOut(
+                0, np.asarray(mock_voxels).transpose(), mock_count
+            ),
+        )
 
         self.map._update_map()
 
@@ -35,15 +47,21 @@ class TestMap(TestCase):
         """
         Test the map query function returns the correct values
         """
-        self.map._initialise_interp_func(interp_method='linear')
-        
-        self.map.add_map_data_callback(data_types.MapPreProcessorOut(0, np.asarray([[0,0,0]]), 1))
+        self.map._initialise_interp_func(interp_method="linear")
+
+        self.map.add_map_data_callback(
+            data_types.MapPreProcessorOut(0, np.asarray([[0, 0, 0]]), 1)
+        )
         self.map._update_map()
 
-        point = (self.map._map_shape.x_min, self.map._map_shape.y_min, self.map._map_shape.z_min)
+        point = (
+            self.map._map_shape.x_min,
+            self.map._map_shape.y_min,
+            self.map._map_shape.z_min,
+        )
 
         rtn_val = self.map._query_map(point)
-        
+
         self.assertEqual(rtn_val, 1)
 
     def test_bin_initilisation(self):
@@ -61,8 +79,10 @@ class TestMap(TestCase):
         """
         Test that the map grid is initilised correctly
         """
-        grid_shape = (self.map._map_shape.x_divisions,
-                      self.map._map_shape.y_divisions,
-                      self.map._map_shape.z_divisions)
+        grid_shape = (
+            self.map._map_shape.x_divisions,
+            self.map._map_shape.y_divisions,
+            self.map._map_shape.z_divisions,
+        )
 
         self.assertEqual(self.map._grid.shape, grid_shape)

@@ -3,28 +3,34 @@ from unittest import TestCase, mock
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from context import modules
-from modules import data_types
+from __context import modules, definitions
+from definitions import data_types
 from modules.map_preprocess import DepthMapAdapter, MapPreprocess
 
 
 class TestMapPreprocess(TestCase):
     def setUp(self):
-        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
-                                           x_max=1, y_max=1, z_max=1,
-                                           x_divisions=10, y_divisions=10, 
-                                           z_divisions=10)
+        map_def = data_types.MapDefinition(
+            x_min=-1,
+            y_min=-1,
+            z_min=-1,
+            x_max=1,
+            y_max=1,
+            z_max=1,
+            x_divisions=10,
+            y_divisions=10,
+            z_divisions=10,
+        )
         self.map_pre = MapPreprocess(map_def=map_def)
 
     def test_local_to_global(self):
         test_local_point = [1, 0, 0]
         test_translation = [1, 0, 0]
-        test_rotation = R.from_euler('zyx', [90, 0, 0], degrees=True).as_quat()
+        test_rotation = R.from_euler("zyx", [90, 0, 0], degrees=True).as_quat()
 
-        test_pose = data_types.Pose(timestamp=1,
-                                    translation=[0, 0, 0],
-                                    quaternion=[0, 0, 0, 1],
-                                    conf=3)
+        test_pose = data_types.Pose(
+            timestamp=1, translation=[0, 0, 0], quaternion=[0, 0, 0, 1], conf=3
+        )
 
         # Test translation no rotation
         test_pose.translation[:] = [1, 0, 0]
@@ -44,27 +50,37 @@ class TestMapPreprocess(TestCase):
 
     def test_discritise_point_cloud(self):
         map_shape = self.map_pre._map_shape
-        test_coord = np.asarray([[map_shape.x_min, map_shape.y_min, map_shape.z_min],
-                                 [map_shape.x_max, map_shape.y_max, map_shape.z_max]])
+        test_coord = np.asarray(
+            [
+                [map_shape.x_min, map_shape.y_min, map_shape.z_min],
+                [map_shape.x_max, map_shape.y_max, map_shape.z_max],
+            ]
+        )
 
-        return_coord = np.asarray([[0, 0, 0],
-                                   [map_shape.x_divisions - 1,
-                                    map_shape.y_divisions - 1,
-                                    map_shape.z_divisions - 1]])
+        return_coord = np.asarray(
+            [
+                [0, 0, 0],
+                [
+                    map_shape.x_divisions - 1,
+                    map_shape.y_divisions - 1,
+                    map_shape.z_divisions - 1,
+                ],
+            ]
+        )
 
         self.map_pre.conf.depth_preprocess.enable_compression = False
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)
 
         np.testing.assert_equal(return_coord, rtn)
         np.testing.assert_equal(count, [1, 1])
-        self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
+        self.assertEqual(rtn.shape, (2, 3))  # Should be a shape of Nx3
 
         self.map_pre.conf.depth_preprocess.enable_compression = True
         rtn, count = self.map_pre._discretise_point_cloud(test_coord)
 
         np.testing.assert_equal(return_coord, rtn)
         np.testing.assert_equal(count, [1, 1])
-        self.assertEqual(rtn.shape, (2, 3)) # Should be a shape of Nx3
+        self.assertEqual(rtn.shape, (2, 3))  # Should be a shape of Nx3
 
     def test_compress_point_cloud(self):
         test_set = np.asarray([[0, 0, 0], [0, 0, 0], [1, 0, 0]])
@@ -79,10 +95,17 @@ class TestMapPreprocess(TestCase):
 
 class TestDepthAdapter(TestCase):
     def setUp(self):
-        map_def = data_types.MapDefinition(x_min=-1, y_min=-1, z_min=-1,
-                                           x_max=1, y_max=1, z_max=1,
-                                           x_divisions=10, y_divisions=10, 
-                                           z_divisions=10)
+        map_def = data_types.MapDefinition(
+            x_min=-1,
+            y_min=-1,
+            z_min=-1,
+            x_max=1,
+            y_max=1,
+            z_max=1,
+            x_divisions=10,
+            y_divisions=10,
+            z_divisions=10,
+        )
         self.map_pre = DepthMapAdapter(map_def=map_def)
 
     def test_scale_result(self):
@@ -94,7 +117,9 @@ class TestDepthAdapter(TestCase):
 
         self.assertEqual(rtn, scale)
 
-    @mock.patch('modules.map_preprocess.DepthMapAdapter._initialise_deprojection_matrix')
+    @mock.patch(
+        "modules.map_preprocess.DepthMapAdapter._initialise_deprojection_matrix"
+    )
     def test_deprojection_result(self, mock_init_deproject):
         """
         Test depth frame deprojection application function
@@ -109,9 +134,9 @@ class TestDepthAdapter(TestCase):
         self.assertEqual(rtn[0][1], 2)
         self.assertEqual(rtn[0][2], 3)
 
-    @mock.patch('modules.map_preprocess.DepthMapAdapter._scale_depth_frame')
-    @mock.patch('modules.map_preprocess.DepthMapAdapter._limit_depth_range')
-    @mock.patch('modules.map_preprocess.DepthMapAdapter._downscale_data')
+    @mock.patch("modules.map_preprocess.DepthMapAdapter._scale_depth_frame")
+    @mock.patch("modules.map_preprocess.DepthMapAdapter._limit_depth_range")
+    @mock.patch("modules.map_preprocess.DepthMapAdapter._downscale_data")
     def test_process_depth_frame(self, mock_downscale, mock_limit, mock_scale):
         """
         Test process depth frame calls required methods - Probably a stupid test
@@ -177,14 +202,14 @@ class TestDepthAdapter(TestCase):
 
         self.map_pre.conf.depth_preprocess.downscale_block_size = test_block_size
 
-        self.map_pre.conf.depth_preprocess.downscale_method = 'mean'
+        self.map_pre.conf.depth_preprocess.downscale_method = "mean"
         rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 0.5)
 
-        self.map_pre.conf.depth_preprocess.downscale_method = 'min_pool'
+        self.map_pre.conf.depth_preprocess.downscale_method = "min_pool"
         rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 0)
 
-        self.map_pre.conf.depth_preprocess.downscale_method = 'max_pool'
+        self.map_pre.conf.depth_preprocess.downscale_method = "max_pool"
         rtn_data = self.map_pre._downscale_data(test_data_frame)
         self.assertEqual(rtn_data, 1)
