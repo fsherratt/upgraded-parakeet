@@ -59,10 +59,10 @@ class udp_socket:
             )
             return False
 
-        self._sRead = socket.socket(self.AF_type, self.SOCK_type, socket.IPPROTO_UDP)
+        self._sRead = socket.socket(self.AF_type, self.SOCK_type)
 
         self._sRead.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sRead.setblocking(0)
+        # self._sRead.setblocking(0)
 
         self.set_close_on_exec(self._sRead.fileno())
 
@@ -79,7 +79,7 @@ class udp_socket:
             warnings.warn("Write address not yet known", UserWarning, stacklevel=3)
             return False
 
-        self._sWrite = socket.socket(self.AF_type, self.SOCK_type, socket.IPPROTO_UDP)
+        self._sWrite = socket.socket(self.AF_type, self.SOCK_type)
 
         if self.enable_broadcast:
             self._sWrite.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -133,10 +133,13 @@ class udp_socket:
 
         try:
             # Efficiently wait for data on the socket
-            select.select([self._sRead], [], [], None)
+            # Timeout = 0.5 second
+            r_list, _, _ = select.select([self._sRead], [], [], 0.5)
+            if not r_list:
+                raise BlockingIOError()
 
             # Read data
-            m, addr = self._sRead.recvfrom(self.buff_size)
+            m, _ = self._sRead.recvfrom(self.buff_size)
 
         except (socket.timeout, BlockingIOError):
             m = None

@@ -13,15 +13,10 @@ services:
       - "15672:15672"
       - "5672:5672"
 
-  udp_broker:
-    build: ./udp_broker
-
-    # ports:
-    #   - "4005:4005/udp" # UDP outgoing
-    #   - "4006:4006/udp" # UDP incoming
+  udp_bridge_listen:
+    build: ./udp_bridge
 
     network_mode: host
-    hostname: udp_broker
 
     environment:
       RABBITMQ_HOST: localhost
@@ -31,13 +26,28 @@ services:
     depends_on:
       - rabbitmq
 
-    expose:
-      - "5672"
+    volumes:
+      - ../:/app
+
+    command: "python3 -m modules.udp_bridge -p udp_listen -c conf/udp_bridge_gcs.yaml"
+
+  udp_bridge_broadcast:
+    build: ./udp_bridge
+
+    network_mode: host
+
+    environment:
+      RABBITMQ_HOST: localhost
+
+    restart: on-failure
+
+    depends_on:
+      - rabbitmq
 
     volumes:
       - ../:/app
 
-    command: "python3 -m modules.udp_broker -in 4006 -out 4005"
+    command: "python3 -m modules.udp_bridge -p udp_broadcast -c conf/udp_bridge_gcs.yaml"
 
   flask:
     build: ./flask_server

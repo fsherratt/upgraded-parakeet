@@ -4,7 +4,7 @@ This module handles all startup classes
 import argparse
 
 
-def standard_parser() -> argparse.ArgumentParser:
+def standard_parser(multiple_processes=False) -> argparse.ArgumentParser:
     """
     Parse standard command line inputs for launchable module
     """
@@ -16,7 +16,7 @@ def standard_parser() -> argparse.ArgumentParser:
         "-P",
         "--process",
         type=str,
-        required=True,
+        required=multiple_processes,
         help="Realsense stream type to launch",
     )
     parser.add_argument(
@@ -41,6 +41,6 @@ def standard_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_cli_input() -> argparse.Namespace:
-    parser = standard_parser()
+def parse_cli_input(multiple_processes=False) -> argparse.Namespace:
+    parser = standard_parser(multiple_processes)
     return parser.parse_known_args()[0]

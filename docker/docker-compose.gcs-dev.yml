@@ -4,5 +4,5 @@ services:
   flask:
     command: /bin/sh -c "while sleep 1000; do :; done"
 
-  udp_broker:
+  udp_bridge:
     command: /bin/sh -c "while sleep 1000; do :; done"

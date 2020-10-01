@@ -1,0 +1,10 @@
+udp_bridge:
+    udp:
+        incoming_port: 14006
+        incoming_host: "localhost"
+        outgoing_port: 14006
+        outgoing_host: "localhost"
+
+    listen_exchange:
+        exchange: "telemetry"
+        route: "copter"

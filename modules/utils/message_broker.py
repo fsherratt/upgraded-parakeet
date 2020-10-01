@@ -1,3 +1,9 @@
+"""
+This module provides a unified interface for interacting with the rabbitMQ message broker
+
+TODO: This needs a lot of work to make more robust
+"""
+
 import threading
 import time
 import sys
@@ -5,6 +11,20 @@ import threading
 
 import pika
 import pickle
+import os
+
+
+def getHostName():
+    """
+    This function retireves the enviromental variable hostname,
+    if none found returns localhost
+    """
+    host = os.environ.get("RABBITMQ_HOST")
+
+    if host is None:
+        return "localhost"
+
+    return host
 
 
 class RabbitMQCommon:
@@ -66,7 +86,7 @@ class Consumer(RabbitMQCommon):
     def start_consuming_thread(self):
         print("Starting production")
         self._rabbit_thread = threading.Thread(
-            target=self.consumer_loop, name="rabbit_mq_consumer", daemon=True
+            target=self.consumer_loop, name="rabbit_mq_consumer"
         )
         self._rabbit_thread.start()
 
