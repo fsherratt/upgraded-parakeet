@@ -1,0 +1,20 @@
+server:
+    flask:
+        port: 5000
+        host: "0.0.0.0"
+        secret_key : "secret!"
+        debug: false
+    
+    socket_io:
+        ping_timeout: 5
+        ping_interval: 1
+        emit_label: "incoming_message"
+    
+message_broker:
+    consume:
+        exchange: "telemetry"
+        route: "ground"
+
+    produce:
+        exchange: "telemetry"
+        route: "copter"

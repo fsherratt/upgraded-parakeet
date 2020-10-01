@@ -1,7 +1,9 @@
+# This file overrides the default run commands for the compose file. This allows
+# accessing an interactive terminal without anything running in the background
 version: "3.5"
 
 services:
-  flask:
+  server
     command: /bin/sh -c "while sleep 1000; do :; done"
 
   udp_bridge:

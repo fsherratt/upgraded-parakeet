@@ -49,19 +49,19 @@ services:
 
     command: "python3 -m modules.udp_bridge -p udp_broadcast -c conf/udp_bridge_gcs.yaml"
 
-  flask:
+  server:
     build: ./flask_server
 
     environment:
       RABBITMQ_HOST: rabbitmq
-    
-    expose: 
+
+    expose:
       - "5672"
-      
+
     ports:
       - "0.0.0.0:80:5000" # Web app
 
     volumes:
       - ../:/app
 
-    command: "python3 -m server.server"
+    command: "python3 -m server.server -c conf/server.yaml"
