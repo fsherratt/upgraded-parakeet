@@ -14,7 +14,7 @@ services:
       - "5672:5672"
 
   udp_bridge_listen:
-    build: ./udp_bridge
+    build: ./python3
 
     network_mode: host
 
@@ -32,7 +32,7 @@ services:
     command: "python3 -m modules.udp_bridge -p udp_listen -c conf/udp_bridge_gcs.yaml"
 
   udp_bridge_broadcast:
-    build: ./udp_bridge
+    build: ./python3
 
     network_mode: host
 
@@ -50,7 +50,7 @@ services:
     command: "python3 -m modules.udp_bridge -p udp_broadcast -c conf/udp_bridge_gcs.yaml"
 
   server:
-    build: ./flask_server
+    build: ./python3
 
     environment:
       RABBITMQ_HOST: rabbitmq

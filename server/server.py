@@ -11,7 +11,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 from server.__context import definitions, modules
-from definitions import enums, data_types
+from definitions import data_types
 
 from modules.utils import load_config, cli_parser, async_message, message_broker
 
