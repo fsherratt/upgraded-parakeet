@@ -5,7 +5,14 @@ import pickle
 import time
 import threading
 
-from modules.utils import udp, load_config, cli_parser, async_message, message_broker
+from modules.utils import (
+    udp,
+    load_config,
+    cli_parser,
+    async_message,
+    message_broker,
+    excepthook,
+)
 
 from modules.__context import definitions
 from definitions import data_types
@@ -139,6 +146,8 @@ class Udp_Broadcaster:
 
 
 if __name__ == "__main__":
+    except_hook = excepthook.Capture_Event()
+
     print("Starting", flush=True)
     cli_args = cli_parser.parse_cli_input(multiple_processes=True)
     conf = load_config.from_file(cli_args.config)
@@ -171,10 +180,10 @@ if __name__ == "__main__":
     try:
         udp_obj.start_thread()
         rmq_obj.start_thread()
-	
+
         print("Running", flush=True)
-        while True:
-            time.sleep(1)
+
+        except_hook.wait_for_exception()
 
     except KeyboardInterrupt:
         pass

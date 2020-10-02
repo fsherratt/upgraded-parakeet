@@ -13,7 +13,7 @@ from flask_socketio import SocketIO
 from server.__context import definitions, modules
 from definitions import data_types
 
-from modules.utils import load_config, cli_parser, async_message, message_broker
+from modules.utils import load_config, cli_parser, async_message, message_broker, excepthook
 
 
 class Server:
@@ -223,6 +223,8 @@ class Web_App_To_Rabbit(Interpreter):
 
 
 if __name__ == "__main__":
+    except_hold = excepthook.Capture_Event()
+
     print("Starting", flush=True)
     cli_args = cli_parser.parse_cli_input(multiple_processes=False)
     conf = load_config.from_file(cli_args.config)
@@ -272,9 +274,8 @@ if __name__ == "__main__":
 
         print("Running", flush=True)
 
-        # Wait around
-        while True:
-            time.sleep(1)
+        # Wait here unless an exception occurs
+        except_hold.wait_for_exception()
 
     except KeyboardInterrupt:
         pass

@@ -6,7 +6,7 @@
 		"../docker-compose.gcs.yml",
 		"../docker-compose.gcs-dev.yml"
 	],
-	"service": "flask",
+	"service": "server",
 	"shutdownAction": "none",
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [

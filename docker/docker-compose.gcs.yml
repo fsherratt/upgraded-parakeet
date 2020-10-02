@@ -21,7 +21,7 @@ services:
     environment:
       RABBITMQ_HOST: localhost
 
-    restart: on-failure
+    restart: unless-stopped
 
     depends_on:
       - rabbitmq
@@ -39,7 +39,7 @@ services:
     environment:
       RABBITMQ_HOST: localhost
 
-    restart: on-failure
+    restart: unless-stopped
 
     depends_on:
       - rabbitmq
@@ -54,6 +54,11 @@ services:
 
     environment:
       RABBITMQ_HOST: rabbitmq
+
+    restart: unless-stopped
+
+    depends_on:
+      - rabbitmq
 
     expose:
       - "5672"
