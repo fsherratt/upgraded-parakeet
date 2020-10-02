@@ -129,40 +129,38 @@ class udp_socket:
         if not self._openReadPort():
             return None
 
-        self._read_lock.acquire()
+        m = None
 
         try:
-            # Efficiently wait for data on the socket
-            # Timeout = 0.5 second
+            self._read_lock.acquire()
+
             r_list, _, _ = select.select([self._sRead], [], [], 0.5)
             if not r_list:
-                raise BlockingIOError()
+                raise TimeoutError
 
             # Read data
             m, _ = self._sRead.recvfrom(self.buff_size)
 
-        except (socket.timeout, BlockingIOError):
-            m = None
+        except TimeoutError:
+            pass
 
         finally:
             self._read_lock.release()
-
-        return m
+            return m
 
     def write(self, b):
         if not self._openWritePort():
             return
 
-        self._write_lock.acquire()
+        bytes_remaining = None
 
         try:
-            self._sWrite.send(b)
-
-        except Exception:
-            traceback.print_exc(file=sys.stdout)
+            self._write_lock.acquire()
+            bytes_remaining = self._sWrite.send(b)
 
         finally:
             self._write_lock.release()
+            return bytes_remaining
 
     def isOpen(self):
         return self._rConnected and self._wConnected

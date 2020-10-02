@@ -104,8 +104,12 @@ class Udp_Listener:
 
             if msg is None:
                 continue
-            # TODO: decode back from bytes
-            msg = pickle.loads(msg)
+
+            try:
+                msg = pickle.loads(msg)
+            except pickle.UnpicklingError:
+                # TODO: Log that meesage couldn't be decoded
+                continue
 
             print("UDP Listener: {}".format(msg), flush=True)
             self._out_callback(msg)
@@ -141,7 +145,12 @@ class Udp_Broadcaster:
             print("UDP Broadcast: {}".format(msg), flush=True)
 
             # TODO: Ensure msg is in format bytes
-            msg = pickle.dumps(msg)
+            try:
+                msg = pickle.dumps(msg)
+            except pickle.PickleError:
+                continue
+                # TODO: log error
+
             self._udp.write(msg)
 
 
