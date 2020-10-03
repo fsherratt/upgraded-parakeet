@@ -11,14 +11,15 @@ def standard_parser(multiple_processes=False) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Upgraded Parakeet Standard parser", allow_abbrev=False
     )
-    parser.add_argument(
-        "-p",
-        "-P",
-        "--process",
-        type=str,
-        required=multiple_processes,
-        help="Realsense stream type to launch",
-    )
+    if multiple_processes:
+        parser.add_argument(
+            "-p",
+            "-P",
+            "--process",
+            type=str,
+            required=True,
+            help="Realsense stream type to launch",
+        )
     parser.add_argument(
         "-c",
         "-C",
