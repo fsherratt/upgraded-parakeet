@@ -139,7 +139,11 @@ class udp_socket:
                 raise TimeoutError
 
             # Read data
-            m, _ = self._sRead.recvfrom(self.buff_size)
+            m, addr = self._sRead.recvfrom(self.buff_size)
+
+            # Learn write path
+            if self._write_address is None:
+                self._write_address = addr
 
         except TimeoutError:
             pass
