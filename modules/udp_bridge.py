@@ -4,6 +4,7 @@ This module acts as a UDP bridge between rabbit mq networks
 import pickle
 import time
 import threading
+import sys
 
 from modules.utils import (
     udp,
@@ -18,39 +19,16 @@ from modules.__context import definitions
 from definitions import data_types
 
 
-class Message_Producer:
-    def __init__(self, rbmq_host):
-        self._host = rbmq_host
+class Message_Producer(async_message.Async_Threaded_Queue):
+    def __init__(self, host):
+        super().__init__()
+        self._host = host
 
-        self._msg_queue = async_message.AsyncMessageCallback()
-        self._running = True
-        self._producer = None
-
-    def queue_command(self, msg):
+    def interpret_msg(self, timestanmp, msg):
         if not isinstance(msg, data_types.Telemetry_Message):
             return  # TODO: Err here
 
-        self._msg_queue.queue_message(msg)
-
-    def loop(self):
-        while self._running:
-            _, msg = self._msg_queue.wait_for_message()
-
-            if msg is None:
-                continue
-
-            self.send_msg(msg)
-
-    def stop_thread(self):
-        self._running = False
-        self._msg_queue.unblock_wait()
-
-    def start_thread(self):
-        self._loop_thread = threading.Thread(target=self.loop, name="RabbitMq_Producer")
-        self._loop_thread.start()
-
-    def send_msg(self, msg):
-        print("Producer: {}".format(msg), flush=True)
+        print("Message_Producer: {}".format(msg), flush=True)
         producer = message_broker.Producer(
             host=self._host, exchange_key=msg.addr_exch, routing_key=msg.addr_route
         )
@@ -60,18 +38,30 @@ class Message_Producer:
 
 
 class Message_Consumer:
-    def __init__(self, out_callback, rbmq_exchange, rbmq_route, rbmq_host):
-        self._out_callback = out_callback
+    def __init__(self, callback, exchange_key, routing_key, host):
+        self._out_callback = callback
 
-        self.host = rbmq_host
-        self.exchange = rbmq_exchange
-        self.route = rbmq_route
+        self.host = host
+        self.exchange = exchange_key
+        self.route = routing_key
 
         self._consumer = None
 
+    def check_type(self, msg):
+        """
+        If the message doesn't already have a destination,
+        send it to the same as consumer
+        """
+        if not isinstance(msg, data_types.Telemetry_Message):
+            msg = data_types.Telemetry_Message(
+                addr_route=self.route, addr_exch=self.exchange, data=msg
+            )
+
+        self._out_callback(msg)
+
     def start_thread(self):
         self._consumer = message_broker.Consumer(
-            callback=self._out_callback,
+            callback=self.check_type,
             host=self.host,
             exchange_key=self.exchange,
             routing_key=self.route,
@@ -114,44 +104,25 @@ class Udp_Listener:
             print("UDP Listener: {}".format(msg), flush=True)
             self._out_callback(msg)
 
+        print("UDP_Listener: Exiting", flush=True)
 
-class Udp_Broadcaster:
+
+class Udp_Broadcaster(async_message.Async_Threaded_Queue):
     def __init__(self, udp_host, udp_port):
-        self._running = True
-        self._loop_thread = None
-
-        self._msg_queue = async_message.AsyncMessageCallback()
+        super().__init__()
 
         self._udp = udp.udp_socket(broadcast_address=(udp_host, udp_port))
 
-    def queue_command(self, msg):
-        self._msg_queue.queue_message(msg)
+    def interpret_msg(self, timestamp, msg):
+        print("UDP Broadcast: {}".format(msg), flush=True)
 
-    def stop_thread(self):
-        self._running = False
-        self._msg_queue.unblock_wait()
+        try:
+            msg = pickle.dumps(msg)
+        except pickle.PickleError:
+            return
+            # TODO: log error
 
-    def start_thread(self):
-        self._loop_thread = threading.Thread(target=self.loop, name="UDP_Listener")
-        self._loop_thread.start()
-
-    def loop(self):
-        while self._running:
-            _, msg = self._msg_queue.wait_for_message()
-
-            if msg is None:
-                continue
-
-            print("UDP Broadcast: {}".format(msg), flush=True)
-
-            # TODO: Ensure msg is in format bytes
-            try:
-                msg = pickle.dumps(msg)
-            except pickle.PickleError:
-                continue
-                # TODO: log error
-
-            self._udp.write(msg)
+        self._udp.write(msg)
 
 
 if __name__ == "__main__":
@@ -161,10 +132,8 @@ if __name__ == "__main__":
     cli_args = cli_parser.parse_cli_input(multiple_processes=True)
     conf = load_config.from_file(cli_args.config)
 
-    rbmq_host = message_broker.getHostName()
-
     if cli_args.process == "udp_listen":
-        rmq_obj = Message_Producer(rbmq_host=rbmq_host)
+        rmq_obj = Message_Producer(host=message_broker.getHostName())
         udp_obj = Udp_Listener(
             out_callback=rmq_obj.queue_command,
             udp_host=conf.udp_bridge.udp.incoming_host,
@@ -177,15 +146,16 @@ if __name__ == "__main__":
             udp_port=conf.udp_bridge.udp.outgoing_port,
         )
         rmq_obj = Message_Consumer(
-            out_callback=udp_obj.queue_command,
-            rbmq_exchange=conf.udp_bridge.listen_exchange.exchange,
-            rbmq_route=conf.udp_bridge.listen_exchange.route,
-            rbmq_host=rbmq_host,
+            callback=udp_obj.queue_command,
+            routing_key=conf.udp_bridge.listen_exchange.route,
+            exchange_key=conf.udp_bridge.listen_exchange.exchange,
+            host=message_broker.getHostName(),
         )
 
     else:
         raise Warning("Unknown process `{}`".format(cli_args.process))
 
+    # Start up proxy
     try:
         udp_obj.start_thread()
         rmq_obj.start_thread()
@@ -199,5 +169,10 @@ if __name__ == "__main__":
 
     finally:
         print("Exiting", flush=True)
+        time.sleep(5)
+
+        # Gracefully shutdown
         udp_obj.stop_thread()
         rmq_obj.stop_thread()
+
+    print("Closed", flush=True)
