@@ -181,30 +181,3 @@ class udp_socket:
                 os.remove(fileName)
             except OSError:
                 pass
-
-
-if __name__ == "__main__":
-    listener = udp_socket(listen_address=("localhost", 4000))
-
-    listener.openPort()
-
-    try:
-        while True:
-            data = listener.read()
-
-            if data is None:
-                continue
-
-            print(
-                "Time: {}\tMsg: {}".format(
-                    int(time.time() * 1000), data.decode("UTF-8")
-                )
-            )
-
-    except KeyboardInterrupt:
-        pass
-
-    finally:
-        listener.closePort()
-
-# ------------------------------------ EOF -------------------------------------
