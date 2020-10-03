@@ -23,9 +23,7 @@ class udp_socket:
         self._sWrite = None
 
         self.buff_size = 65535
-        self.AF_type = socket.AF_INET
-        self.SOCK_type = socket.SOCK_DGRAM
-        self.enable_broadcast = True
+        self.timeout = None
 
         if listen_address is None and broadcast_address is None:
             raise Exception(
@@ -47,57 +45,48 @@ class udp_socket:
 
         return False
 
-    def _openReadPort(self) -> bool:
+    def _openReadPort(self):
         if self._rConnected:
-            return True
+            return
 
         elif self._read_address is None:
-            warnings.warn(
-                "Read address not known",
-                UserWarning,
-                stacklevel=3,
-            )
-            return False
+            # TODO: Do something more helpful
+            print("Read address not known")
+            return
 
-        self._sRead = socket.socket(self.AF_type, self.SOCK_type)
-
+        self._sRead = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sRead.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # self._sRead.setblocking(0)
+        self._sRead.settimeout(self.timeout)
 
         self.set_close_on_exec(self._sRead.fileno())
 
         self._sRead.bind(self._read_address)
+
         self._rConnected = True
 
-        return True
-
-    def _openWritePort(self) -> bool:
+    def _openWritePort(self):
         if self._wConnected:
-            return True
+            return
 
         elif self._write_address is None:
-            warnings.warn("Write address not yet known", UserWarning, stacklevel=3)
-            return False
+            # TODO: Do something more helpful
+            return
 
-        self._sWrite = socket.socket(self.AF_type, self.SOCK_type)
+        self._sWrite = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        if self.enable_broadcast:
-            self._sWrite.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
+        self._sWrite.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self._sWrite.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sWrite.setblocking(0)
+        self._sWrite.settimeout(self.timeout)
 
         self.set_close_on_exec(self._sWrite.fileno())
 
         self._sWrite.connect(self._write_address)
 
-        # Retrun read port can be deterimened after UDP connect
-        if self._read_address is None:
-            self._read_address = self._sWrite.getsockname()
-
         self._wConnected = True
 
-        return True
+        # Read address can be deterimened after write connected
+        if self._read_address is None:
+            self._read_address = self._sWrite.getsockname()
 
     def closePort(self):
         self._closeReadPort()
@@ -107,45 +96,35 @@ class udp_socket:
         if self._sRead is None:
             return
 
-        try:
-            self._sRead.close()
-            self.removeUNIXFile(self._read_address)
-
-            self._rConnected = False
-        except:
-            traceback.print_exc(file=sys.stdout)
+        self._sRead.close()
+        self._rConnected = False
 
     def _closeWritePort(self):
         if self._sWrite is None:
             return
 
-        try:
-            self._sWrite.close()
-            self._wConnected = False
-        except:
-            traceback.print_exc(file=sys.stdout)
+        self._sWrite.close()
+        self._wConnected = False
 
     def read(self, b=0):
-        if not self._openReadPort():
-            return None
+        if not self._rConnected:
+            return
 
         m = None
-
         try:
             self._read_lock.acquire()
 
             r_list, _, _ = select.select([self._sRead], [], [], 0.5)
-            if not r_list:
-                raise TimeoutError
 
-            # Read data
-            m, addr = self._sRead.recvfrom(self.buff_size)
+            if r_list:
+                m, addr = self._sRead.recvfrom(self.buff_size)
 
-            # Learn write path
-            if self._write_address is None:
-                self._write_address = addr
+                # Write address can be learnt from incoming packet
+                if self._write_address is None:
+                    self._write_address = addr
 
-        except TimeoutError:
+        except socket.timeout:
+            # TODO: something more useful here
             pass
 
         finally:
@@ -153,21 +132,23 @@ class udp_socket:
             return m
 
     def write(self, b):
-        if not self._openWritePort():
+        if not self._wConnected:
             return
 
         bytes_remaining = None
 
         try:
             self._write_lock.acquire()
+
             bytes_remaining = self._sWrite.send(b)
+
+        except socket.timeout:
+            # TODO: something more useful here
+            pass
 
         finally:
             self._write_lock.release()
             return bytes_remaining
-
-    def isOpen(self):
-        return self._rConnected and self._wConnected
 
     def set_close_on_exec(self, fd):
         try:
@@ -178,10 +159,3 @@ class udp_socket:
             fcntl.fcntl(fd, fcntl.F_SETFD, flags)
         except:
             pass
-
-    def removeUNIXFile(self, fileName):
-        if self.AF_type == socket.AF_UNIX:
-            try:
-                os.remove(fileName)
-            except OSError:
-                pass
