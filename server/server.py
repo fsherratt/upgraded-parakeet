@@ -198,8 +198,8 @@ if __name__ == "__main__":
         telem_in.stop_consuming()
         telem_out.close_channel()
 
-        web_interpreter.stop_thead()
-        rabbit_interpreter.stop_thead()
+        web_interpreter.stop_thread()
+        rabbit_interpreter.stop_thread()
 
         time.sleep(5)
         print("Closed", flush=True)

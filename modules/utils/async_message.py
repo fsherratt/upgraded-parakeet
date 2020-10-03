@@ -80,7 +80,7 @@ class Async_Threaded_Queue:
         )
         self._thread.start()
 
-    def stop_thead(self):
+    def stop_thread(self):
         self._running = False
         self._msg_queue.unblock_wait()
 
@@ -107,6 +107,7 @@ class Async_Threaded_Queue:
                 continue
 
             msg = self.interpret_msg(timestamp, msg)
+        print("{}: Exited thread loop".format(self.__class__.__name__), flush=True)
 
     def interpret_msg(self, timestamp, msg):
         raise NotImplementedError
