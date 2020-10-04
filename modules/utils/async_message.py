@@ -99,7 +99,12 @@ class Async_Threaded_Queue:
 
         print("{}: Succesfully closed thread".format(self.__class__.__name__))
 
+    def pre_loop_action(self):
+        pass
+
     def _process_queue(self):
+        self.pre_loop_action()
+
         while self._running:
             timestamp, msg = self._msg_queue.wait_for_message()
 

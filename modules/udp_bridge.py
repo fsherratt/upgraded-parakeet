@@ -89,6 +89,8 @@ class Udp_Listener:
         self._loop_thread.start()
 
     def loop(self):
+        self._udp.openPort()
+
         while self._running:
             msg = self._udp.read()
 
@@ -112,6 +114,9 @@ class Udp_Broadcaster(async_message.Async_Threaded_Queue):
         super().__init__()
 
         self._udp = udp.udp_socket(broadcast_address=(udp_host, udp_port))
+
+    def pre_loop_action(self):
+        self._udp.openPort()
 
     def interpret_msg(self, timestamp, msg):
         print("UDP Broadcast: {}".format(msg), flush=True)
