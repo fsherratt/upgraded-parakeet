@@ -121,11 +121,15 @@ FROM opencv_env
 # Install python packages
 COPY requirements.txt .
 COPY --from=opencv_build_env /wheelhouse ./wheelhouse
-RUN pip install --no-index --find-links=/wheelhouse -r requirements.txt && rm -rf wheelhouse
+RUN pip install --no-index numpy==${NUMPY_VERSION} --find-links=/wheelhouse
+RUN pip install --no-index --find-links=/wheelhouse -r requirements.txt
 
 # Install opencv
 COPY --from=opencv_build_env /opencv-$OPENCV_VERSION/build/*.deb ./opencv/
-RUN dpkg -i ./opencv/*.deb && rm -rf opencv
+RUN dpkg -i ./opencv/*.deb
+
+# Clean up
+RUN rm -rf opencv  && rm -rf wheelhouse
 
 WORKDIR /app
 
