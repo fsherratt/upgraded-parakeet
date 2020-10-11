@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglfw3-dev \
     libgl1-mesa-dev \
     libglu1-mesa-dev \
+    udev \
     # Build tools
     build-essential \
     cmake \
@@ -30,25 +31,36 @@ RUN wget -O librealsense.zip https://github.com/IntelRealSense/librealsense/arch
 WORKDIR /librealsense-${LIBREALSENSE_VERSION}/build
 
 # Setup librealsense build
-RUN cmake \
+ARG TARGETPLATFORM
+RUN case ${TARGETPLATFORM} in \
+    "linux/arm64" | "linux/arm/v7") \
+    USE_RSUB_BACKEND="bool:true" ;; \
+    * ) \
+    USE_RSUB_BACKEND="bool:false" ;; \
+    esac; \
+
+    cmake \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D BUILD_EXAMPLES=bool:false \
     -D BUILD_GRAPHICAL_EXAMPLES=bool:false \
     -D BUILD_PYTHON_BINDINGS=bool:true \
     -D PYTHON_EXECUTABLE=$(which python3) \
-    -D DFORCE_RSUSB_BACKEND=bool:true \
+    -D DFORCE_RSUSB_BACKEND=${USB_RSUB_BACKEND} \
     ..
 
-# Compile librealsense
-RUN make -j2
-#${nproc}
+# Compile librealsense - on arm only 1 core works reliably
+RUN make -j${nproc}
 RUN make install && ldconfig
+
+WORKDIR /
 
 # https://github.com/IntelRealSense/meta-intel-realsense/issues/20
 RUN cp /librealsense-${LIBREALSENSE_VERSION}/wrappers/python/pyrealsense2/__init__.py \
     /usr/local/lib/python3.8/site-packages/pyrealsense2/
 
-WORKDIR /
+RUN cp /librealsense-${LIBREALSENSE_VERSION}/config/99-realsense-libusb.rules /etc/udev/rules.d/ && \
+    udevadm control --reload-rules && udevadm trigger 
+
 RUN rm -rf librealsense-${LIBREALSENSE_VERSION}
 
 # Install pip packages
@@ -61,8 +73,7 @@ RUN pip wheel -r requirements.txt --wheel-dir=/wheelhouse \
 RUN pip install --no-index --find-links=/wheelhouse -r requirements.txt && rm -rf wheelhouse
 RUN rm -rf wheelhouse
 
-WORKDIR /app
-
+# Clean up
 RUN apt-get purge -y \
     build-essential \
     cmake \
@@ -70,5 +81,7 @@ RUN apt-get purge -y \
     unzip \
     pkg-config && \
     apt-get autoremove -y
+
+WORKDIR /app
 
 CMD "/bin/bash"
