@@ -1,7 +1,4 @@
-# This is a multi-stage build
-# - Stage 1 is installing all required packages for the final images
-# - Stage 2 involves install packages required for opencv/numpy compilation
-# - Stage 3 - revert to stage 1 image, copy compiled code from stage 2 and install
+# Realsense build
 FROM python:3.8.6-slim as librealsense_env
 ENV LIBREALSENSE_VERSION=2.38.1
 
@@ -13,7 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglfw3-dev \
     libgl1-mesa-dev \
     libglu1-mesa-dev \
+    # Tools
     udev \
+    usbutils \
     # Build tools
     build-essential \
     cmake \
@@ -34,18 +33,18 @@ WORKDIR /librealsense-${LIBREALSENSE_VERSION}/build
 ARG TARGETPLATFORM
 RUN case ${TARGETPLATFORM} in \
     "linux/arm64" | "linux/arm/v7") \
-    USE_RSUB_BACKEND="bool:true" ;; \
+    USE_RSUSB_BACKEND="true" ;; \
     * ) \
-    USE_RSUB_BACKEND="bool:false" ;; \
+    USE_RSUSB_BACKEND="false" ;; \
     esac; \
-
+    echo ${USE_RSUSB_BACKEND} ; \
     cmake \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D BUILD_EXAMPLES=bool:false \
     -D BUILD_GRAPHICAL_EXAMPLES=bool:false \
     -D BUILD_PYTHON_BINDINGS=bool:true \
     -D PYTHON_EXECUTABLE=$(which python3) \
-    -D DFORCE_RSUSB_BACKEND=${USB_RSUB_BACKEND} \
+    -D FORCE_RSUSB_BACKEND=${USB_RSUSB_BACKEND} \
     ..
 
 # Compile librealsense - on arm only 1 core works reliably
@@ -57,21 +56,13 @@ WORKDIR /
 # https://github.com/IntelRealSense/meta-intel-realsense/issues/20
 RUN cp /librealsense-${LIBREALSENSE_VERSION}/wrappers/python/pyrealsense2/__init__.py \
     /usr/local/lib/python3.8/site-packages/pyrealsense2/
-
-RUN cp /librealsense-${LIBREALSENSE_VERSION}/config/99-realsense-libusb.rules /etc/udev/rules.d/ && \
-    udevadm control --reload-rules && udevadm trigger 
-
+# Set USB rules
+RUN cp /librealsense-${LIBREALSENSE_VERSION}/config/99-realsense-libusb.rules /etc/udev/rules.d/
 RUN rm -rf librealsense-${LIBREALSENSE_VERSION}
 
 # Install pip packages
-# We do it like this so if compilation from source is required we don't have to
-# carry over the build tools, instead we can just copy the wheel and install from that
 COPY requirements.txt .
-RUN python3 -m pip install --upgrade pip setuptools wheel
-RUN pip wheel -r requirements.txt --wheel-dir=/wheelhouse \
-    --extra-index-url https://www.piwheels.org/simple
-RUN pip install --no-index --find-links=/wheelhouse -r requirements.txt && rm -rf wheelhouse
-RUN rm -rf wheelhouse
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://www.piwheels.org/simple
 
 # Clean up
 RUN apt-get purge -y \
