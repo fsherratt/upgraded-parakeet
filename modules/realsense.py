@@ -42,9 +42,7 @@ class RealsensePipeline:
         """
         if traceback:
             print(traceback.tb_frame)
-            self._exception_handle(
-                "rs_pipeline: __exit__: `{}`".format(exception_value)
-            )
+            self._exception_handle("rs_pipeline:__exit__:`{}`".format(exception_value))
 
         self.close_connection()
 
@@ -59,7 +57,7 @@ class RealsensePipeline:
             self._pipe.start(cfg)
         except RuntimeError as raised_exception:
             self._exception_handle(
-                "rs_pipeline:{}: failed to connect to camera".format(self._object_name)
+                "rs_pipeline:{}:failed to connect to camera".format(self._object_name),
             )
             raise raised_exception
 
@@ -77,7 +75,9 @@ class RealsensePipeline:
         try:
             self._pipe.stop()
         except RuntimeError:
-            pass
+            self._exception_handle(
+                "close_connection:{}:RuntimeError pipe stop".format(self._object_name)
+            )
         finally:
             self._pipe = None
 
@@ -148,12 +148,13 @@ class RealsensePipeline:
         """
         return data
 
-    def _exception_handle(self, err):
+    def _exception_handle(self, err_string):
         """
         Function to collate interal class exceptions
-        TODO: Log error - requires rabbit MQ stuff
+        TODO: Log error
         """
-        print(err)
+        print("**********TODO: Log this properly*************")
+        print(err_string)
 
     def _debug_output(self, data):
         raise NotImplementedError
