@@ -361,6 +361,47 @@ class PosePipeline(RealsensePipeline):
         )
 
 
+class D435Pipeline(DepthPipeline, ColorPipeline):
+    """
+    Both D435 streams - Depth and Color
+    """
+
+    def __init__(self, config_file="conf/realsense.yaml", debug=False):
+        super().__init__(config_file, debug)
+
+        self._object_name = "D435"
+
+    def _generate_config(self, cfg: rs.config) -> rs.config:
+        cfg = DepthPipeline._generate_config(self, cfg)
+        cfg = ColorPipeline._generate_config(self, cfg)
+
+        return cfg
+
+    def _post_connect_process(self):
+        DepthPipeline._post_connect_process(self)
+        ColorPipeline._post_connect_process(self)
+
+    def _get_frame(self, frames):
+        dFrame = DepthPipeline._get_frame(self, frames)
+        cFrame = ColorPipeline._get_frame(self, frames)
+
+        return (dFrame, cFrame)
+
+    def _get_data(self, frame):
+        dFrame = DepthPipeline._get_data(self, frame[0])
+        cFrame = ColorPipeline._get_data(self, frame[1])
+        return (dFrame, cFrame)
+
+    def _post_process(self, data):
+        dData = DepthPipeline._post_process(self, data[0])
+        cData = ColorPipeline._post_process(self, data[1])
+        return (dData, cData)
+
+    def _debug_output(self, data):
+        DepthPipeline._debug_output(self, data[0])
+        ColorPipeline._debug_output(self, data[1])
+
+
 if __name__ == "__main__":
     cli_args = cli_parser.parse_cli_input()
 
@@ -384,6 +425,8 @@ if __name__ == "__main__":
         realsense = ColorPipeline(**object_arguments)
     elif cli_args.process == "rs_pose":
         realsense = PosePipeline(**object_arguments)
+    elif cli_args.process == "rs_d435":
+        realsense = D435Pipeline(**object_arguments)
     else:
         raise Warning("Incorrect realsense module specified")
 
