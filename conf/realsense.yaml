@@ -1,5 +1,16 @@
 ---
 realsense:
+    frame_wait_timeout: 500 # Milliseconds
+
+    # Record incoming data to file
+    replay:
+        record_to_file: false
+        load_from_file: true
+        repeat_playback: false
+        realtime: true
+        
+        filename: "logs/realsense_recordings/test.bag"
+    
     # Realsense D435 depth camera setup
     depth:
         object_name: 'Depth'
@@ -7,7 +18,7 @@ realsense:
         height: 480
         framerate: 30
 
-        visual_preset: 3
+        visual_preset: 3 # High Accuracy
 
     # Realsense D435 RGB camera setup
     color:

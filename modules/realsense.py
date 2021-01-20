@@ -19,6 +19,10 @@ class RealsensePipeline:
     Parent class for all realsense stream classes
     """
 
+    # Status codes
+    NO_FRAME_DATA = 1
+    PLAYBACK_FINISHED = 2
+
     def __init__(self, config_file=None, debug=False):
         """
         Declare all the constants, tunable variables are public
@@ -29,6 +33,9 @@ class RealsensePipeline:
 
         self.debug = debug
         self.conf = load_config.from_file(config_file)
+
+        self.profile = None
+        self.playback = None
 
     def __enter__(self):
         """
@@ -51,7 +58,20 @@ class RealsensePipeline:
         Open Connection to realsense camera
         """
         self._pipe = rs.pipeline()
-        cfg = self._generate_config()
+
+        cfg = rs.config()
+        cfg = self._generate_config(cfg)
+
+        if self.conf.realsense.replay.record_to_file:
+            cfg.enable_record_to_file(self.conf.realsense.replay.filename)
+
+        if self.conf.realsense.replay.load_from_file:
+            cfg.enable_device_from_file(
+                file_name=self.conf.realsense.replay.filename,
+                repeat_playback=self.conf.realsense.replay.repeat_playback,
+            )
+
+        assert cfg.can_resolve(self._pipe)
 
         try:
             self._pipe.start(cfg)
@@ -61,9 +81,15 @@ class RealsensePipeline:
             )
             raise raised_exception
 
+        self.profile = self._pipe.get_active_profile()
+
         self._post_connect_process()
 
-        print("rs_pipeline:{}: Connection Open".format(self._object_name))
+        if self.conf.realsense.replay.load_from_file:
+            playback = rs.playback(self.profile.get_device())
+            playback.set_real_time(self.conf.realsense.replay.realtime)
+
+        print("rs_pipeline:{}:Connection Open".format(self._object_name))
 
     def close_connection(self):
         """
@@ -81,20 +107,28 @@ class RealsensePipeline:
         finally:
             self._pipe = None
 
-        print("rs_pipeline:{}: Connection Closed".format(self._object_name))
+        print("rs_pipeline:{}:Connection Closed".format(self._object_name))
 
     def wait_for_frame(self) -> tuple:
         """
         Retrieve a data from the pipeline
         """
+
         try:
-            frames = self._pipe.wait_for_frames()
-        except RuntimeError as raised_exception:
+            frames = self._pipe.wait_for_frames(
+                timeout_ms=self.conf.realsense.frame_wait_timeout
+            )
+
+        except RuntimeError as raised_exception:  # Handle missed frames
+            if self.conf.realsense.replay.load_from_file:
+                return self.PLAYBACK_FINISHED  # TODO: This should be a status code
+
             self._exception_handle(
                 "rs_pipeline:{}:wait_for_frame: Timeout waiting for data frame".format(
                     self._object_name
-                )
+                ),
             )
+
             raise raised_exception
 
         frame = self._get_frame(frames)
@@ -105,9 +139,9 @@ class RealsensePipeline:
             self._exception_handle(
                 "rs_pipeline:{}:wait_for_frame: Frame contained no data".format(
                     self._object_name
-                )
+                ),
             )
-            return None
+            return self.NO_FRAME_DATA
 
         # Post Process
         data = self._post_process(data)
@@ -118,7 +152,7 @@ class RealsensePipeline:
         # End
         return data
 
-    def _generate_config(self) -> rs.config:
+    def _generate_config(self, cfg: rs.config) -> rs.config:
         """
         OVERLOADED FUNCTION: Generate the pipeline config
         """
@@ -177,8 +211,7 @@ class DepthPipeline(RealsensePipeline):
     def wait_for_frame(self) -> data_types.Depth:
         return super().wait_for_frame()
 
-    def _generate_config(self) -> rs.config:
-        cfg = rs.config()
+    def _generate_config(self, cfg: rs.config) -> rs.config:
         cfg.enable_stream(
             rs.stream.depth,
             self.conf.realsense.depth.width,
@@ -189,7 +222,14 @@ class DepthPipeline(RealsensePipeline):
         return cfg
 
     def _post_connect_process(self):
-        self._get_intrinsics()
+        sensor = self.profile.get_device().first_depth_sensor()
+        self._get_intrinsics(sensor)
+
+        # Set visual preset
+        if not self.conf.realsense.replay.load_from_file:
+            sensor.set_option(
+                rs.option.visual_preset, self.conf.realsense.depth.visual_preset
+            )
 
     def _get_frame(self, frames):
         return frames.get_depth_frame()
@@ -204,20 +244,12 @@ class DepthPipeline(RealsensePipeline):
         """
         return self._fov
 
-    def _get_intrinsics(self):
+    def _get_intrinsics(self, sensor):
         """
         Get camera intrinsics
         """
-        profile = self._pipe.get_active_profile()
-        sensor = profile.get_device().first_depth_sensor()
-
-        time.sleep(1)
-        sensor.set_option(
-            rs.option.visual_preset, self.conf.realsense.depth.visual_preset
-        )
-
         intrin = (
-            profile.get_stream(rs.stream.depth)
+            self.profile.get_stream(rs.stream.depth)
             .as_video_stream_profile()
             .get_intrinsics()
         )
@@ -254,8 +286,7 @@ class ColorPipeline(RealsensePipeline):
     def wait_for_frame(self) -> data_types.Color:
         return super().wait_for_frame()
 
-    def _generate_config(self) -> rs.config:
-        cfg = rs.config()
+    def _generate_config(self, cfg: rs.config) -> rs.config:
         cfg.enable_stream(
             rs.stream.color,
             self.conf.realsense.color.width,
@@ -308,8 +339,7 @@ class PosePipeline(RealsensePipeline):
         self._tilt_deg = offset
         self._initialise_rotational_transforms()
 
-    def _generate_config(self) -> rs.config:
-        cfg = rs.config()
+    def _generate_config(self, cfg: rs.config) -> rs.config:
         cfg.enable_stream(rs.stream.pose)
         return cfg
 
@@ -437,6 +467,9 @@ if __name__ == "__main__":
 
         while True:
             data = realsense.wait_for_frame()
+
+            if data == realsense.PLAYBACK_FINISHED:  # Playback has finished
+                break
             # TODO: add in data streaming
 
     except KeyboardInterrupt:
