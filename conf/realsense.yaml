@@ -1,15 +1,16 @@
 ---
 realsense:
-    frame_wait_timeout: 500 # Milliseconds
+    frame_wait_timeout: 5000 # Milliseconds
 
-    # Record incoming data to file
-    replay:
+    record:
         record_to_file: false
+        log_file: "logs/realsense_recordings/test.bag"
+
+    replay:
         load_from_file: true
         repeat_playback: false
         realtime: true
-        
-        filename: "logs/realsense_recordings/test.bag"
+        log_file: "logs/realsense_recordings/20210121_220817/rs_depth_log.bag"
     
     # Realsense D435 depth camera setup
     depth:

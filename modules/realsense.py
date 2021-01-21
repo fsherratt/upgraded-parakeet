@@ -23,7 +23,7 @@ class RealsensePipeline:
     NO_FRAME_DATA = 1
     PLAYBACK_FINISHED = 2
 
-    def __init__(self, config_file=None, debug=False):
+    def __init__(self, config, debug=False):
         """
         Declare all the constants, tunable variables are public
         """
@@ -32,7 +32,7 @@ class RealsensePipeline:
         self._object_name = "Untitled"
 
         self.debug = debug
-        self.conf = load_config.from_file(config_file)
+        self.conf = config
 
         self.profile = None
         self.playback = None
@@ -62,15 +62,16 @@ class RealsensePipeline:
         cfg = rs.config()
         cfg = self._generate_config(cfg)
 
-        if self.conf.realsense.replay.record_to_file:
-            cfg.enable_record_to_file(self.conf.realsense.replay.filename)
+        if self.conf.realsense.record.record_to_file:
+            cfg.enable_record_to_file(self.conf.realsense.record.log_file)
 
         if self.conf.realsense.replay.load_from_file:
             cfg.enable_device_from_file(
-                file_name=self.conf.realsense.replay.filename,
+                file_name=self.conf.realsense.replay.log_file,
                 repeat_playback=self.conf.realsense.replay.repeat_playback,
             )
 
+        # Check configuration is possible with connected devices
         assert cfg.can_resolve(self._pipe)
 
         try:
@@ -199,8 +200,8 @@ class DepthPipeline(RealsensePipeline):
     D435 depth stream realsense class
     """
 
-    def __init__(self, config_file="conf/realsense.yaml", debug=False):
-        super().__init__(config_file, debug)
+    def __init__(self, config, debug=False):
+        super().__init__(config, debug)
 
         # private
         self._object_name = self.conf.realsense.depth.object_name
@@ -226,6 +227,7 @@ class DepthPipeline(RealsensePipeline):
         self._get_intrinsics(sensor)
 
         # Set visual preset
+        time.sleep(1)
         if not self.conf.realsense.replay.load_from_file:
             sensor.set_option(
                 rs.option.visual_preset, self.conf.realsense.depth.visual_preset
@@ -277,8 +279,8 @@ class ColorPipeline(RealsensePipeline):
     D435 RGB color stream realsense class
     """
 
-    def __init__(self, config_file="conf/realsense.yaml", debug=False):
-        super().__init__(config_file, debug)
+    def __init__(self, config, debug=False):
+        super().__init__(config, debug)
 
         # private
         self._object_name = self.conf.realsense.color.object_name
@@ -314,8 +316,8 @@ class PosePipeline(RealsensePipeline):
     T265 pose stream realsense class
     """
 
-    def __init__(self, config_file="conf/realsense.yaml", debug=False):
-        super().__init__(config_file, debug)
+    def __init__(self, config, debug=False):
+        super().__init__(config, debug)
 
         # Private
         self._object_name = self.conf.realsense.pose.object_name
@@ -397,8 +399,8 @@ class D435Pipeline(DepthPipeline, ColorPipeline):
     Both D435 streams - Depth and Color
     """
 
-    def __init__(self, config_file="conf/realsense.yaml", debug=False):
-        super().__init__(config_file, debug)
+    def __init__(self, config, debug=False):
+        super().__init__(config, debug)
 
         self._object_name = "D435"
 
@@ -436,14 +438,17 @@ class D435Pipeline(DepthPipeline, ColorPipeline):
 if __name__ == "__main__":
     cli_args = cli_parser.parse_cli_input()
 
+    # Load specified or default confing yaml files
+    config_file = cli_args.config
+    if config_file is None:
+        config_file = "conf/realsense.yaml"
+
     # CLI arguments are optional, a keyword argument dictionary is the
     # simplest way to achieve optional arguments without overriding defaults
     object_arguments = {}
-
-    if cli_args.config is not None:
-        object_arguments["config_file"] = cli_args.config
-    else:
-        object_arguments["config_file"] = "conf/realsense.yaml"
+    object_arguments["config"] = load_config.from_file(
+        config_file, cli_args.config_cli_override
+    )
 
     if cli_args.debug is not None:
         object_arguments["debug"] = cli_args.debug

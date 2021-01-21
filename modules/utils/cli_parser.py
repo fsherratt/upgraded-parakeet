@@ -37,6 +37,13 @@ def standard_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable debug output",
     )
+    parser.add_argument(
+        "--config_cli_override",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Enable overriding of config file variables through command line",
+    )
 
     return parser
 
