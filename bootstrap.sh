@@ -39,3 +39,12 @@ apt install ros-foxy-desktop -y
 # Install autocomplete
 apt install -y python3-pip
 pip3 install -U argcomplete
+
+# Setup open CV
+
+# Install VS Code
+
+
+# Install Git kraken
+wget https://release.gitkraken.com/linux/gitkraken-amd64.deb
+dpkg -i gitkraken-amd64.deb
