@@ -40,6 +40,10 @@ apt install ros-foxy-desktop -y
 apt install -y python3-pip
 pip3 install -U argcomplete
 
+
+# Add ROS source to bashrc
+echo "source /opt/ros/foxy/setup.bash" >> ~/.bashrc
+
 # Setup open CV
 
 # Install VS Code
