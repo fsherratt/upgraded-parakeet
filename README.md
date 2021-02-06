@@ -7,6 +7,32 @@ Upgraded Parakeet is the next generation architecture for the [TeamBathDrones](h
 ## Installation
 See the setup [guide](docs/setup.md) for installation instructions
 
+### Quick Installation
+This requires vagrant.
+Clone the repository and run
+```
+vagrant up
+```
+
+This should download the current VM snapshot, install the required packages and open a VM ready for work.
+
+To close run
+```
+vagrant halt
+```
+
+To suspend run
+```
+vagrant suspend
+```
+
+To delete run
+```
+vagrant destroy
+```
+
+
+
 ## Usage
 The project follows the publish-subscriber model, with individual functions split into nodes and inter-process communication handled by the [Rabbit MQ](#) message broker
 
