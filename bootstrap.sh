@@ -89,6 +89,8 @@ else
 	echo "Bash scripts already contains source for foxy ros. Skipping.."
 fi
 
+# TODO Add colcon_cd to shell. This will be decided when we decide where this will go.
+
 # Setup open CV
 
 # Install VS Code

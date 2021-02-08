@@ -60,7 +60,18 @@ Vagrant.configure("2") do |config|
     # Customize the amount of memory on the VM:
     vb.memory = "4096"
     # Customize the amount of video memory proivded to the machine
-    vb.customize ["modifyvm", :id, "--vram", "12"]
+    vb.customize ["modifyvm", :id, "--vram", "128"]
+
+    # Hardware virtualisation
+    vb.customize ["modifyvm", :id, "--hwvirtex", "on"]
+    # Set only graphics controller that works
+    vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxvga"]
+    # Enable shared clipboard
+    vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
+    # Enable USB
+    vb.customize ["modifyvm", :id, "--usb", "on"]
+    vb.customize ["modifyvm", :id, "--usbxhci", "on"]
   end
 
   # View the documentation for the provider you are using for more
