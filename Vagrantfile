@@ -72,6 +72,9 @@ Vagrant.configure("2") do |config|
     # Enable USB
     vb.customize ["modifyvm", :id, "--usb", "on"]
     vb.customize ["modifyvm", :id, "--usbxhci", "on"]
+
+    # Add 3D acceleration (requires guest additions to be installed)
+    vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
   end
 
   # View the documentation for the provider you are using for more
