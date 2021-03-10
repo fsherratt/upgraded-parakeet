@@ -3,8 +3,14 @@
 # Update local packages
 echo "Updating packages...."
 apt-get update
-# Upgrade our packages
 apt-get upgrade -y
+apt-get autoremove -y
+
+#---------------------------------------------------#
+# Install virtualbox guest additions
+apt-get install dkms build-essential module-assistant -y
+apt-get install virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11 -y
+apt-get update
 
 #Install TMUX and VIM
 # If we cannot find vim, install it.
