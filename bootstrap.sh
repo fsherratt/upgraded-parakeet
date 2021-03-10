@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
+# Actions in this file must be Idempotent - i.e. if run a second time they don't fuck things up
+
 # Update local packages
 export USER=vagrant
+export USER_HOME=/home/$USER
 export PX4_VERSION=v1.11.3
 
 echo "Let's Go!!!"
@@ -12,12 +15,6 @@ echo "Updating packages...."
 apt-get update
 apt-get upgrade -y
 apt-get autoremove -y
-
-#---------------------------------------------------#
-# Install virtualbox guest additions
-apt-get install dkms build-essential module-assistant -y
-apt-get install virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11 -y
-apt-get update
 
 #---------------------------------------------------#
 #Install TMUX and VIM
@@ -47,6 +44,7 @@ if ! dpkg -s ubuntu-desktop-minimal &> /dev/null
 then
 	echo "Installing desktop env...."
 	apt-get install ubuntu-desktop-minimal -y
+	apt-get upgrade
 else
 	echo "Ubuntu desktop installed. Skipping...."
 fi
@@ -55,8 +53,8 @@ fi
 
 #---------------------------------------------------#
 # Setup python 3
-If we cannot find the python3 command, install it
-if ! command -v python3 &> /dev/null
+# If we cannot find the pip3 command, install it
+if ! command -v pip3 &> /dev/null
 then
 	echo "Installing python3..."
 	apt-get install python3 -y
@@ -102,38 +100,41 @@ fi
 # Add ROS source to bashrc
 #NOTE THIS ONLY WORKS FOR NOETIC
 # If we cannot find the text "noetic" in our default bashrc, add it.
-if ! grep -q noetic /home/$USER/.bashrc 
+if ! grep -q noetic $USER_HOME/.bashrc 
 then
 	echo "Adding ros noetic to "$USER" .bashrc..."
-	echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-	source ~/.bashrc
+	echo "source /opt/ros/noetic/setup.bash" >> $USER_HOME/.bashrc 
+	source $USER_HOME/.bashrc 
 
-else
+elsecd /home
 	echo "Bash scripts already contains source for noetic ros. Skipping.."
 fi
 
 #---------------------------------------------------#
 # Setup Catkin
 #NOTE THIS IS A PRETTY WEAK WAY OF CHECKING CATKIN IS INSTALLED
-if [ ! -d /home/$USER/catkin_ws ]
+if [ ! -d $USER_HOME/catkin_ws ]
 then
 	echo "Preparing catkin..."
+	
 	apt-get install python3-catkin-tools \
 					python3-catkin-lint \
-					python3-rosinstall-generator \
-					osrf-pycommon-y
-
-	mkdir ~/catkin_ws
-	cd ~/catkin_ws
+					python3-rosinstall-generator -y
+	pip3 install osrf-pycommon
 	
+	mkdir $USER_HOME/catkin_ws/
+	chown $USER $USER_HOME/catkin_ws
+	cd $USER_HOME/catkin_ws/
+
 	mkdir build; mkdir devel; mkdir install; mkdir logs; mkdir src
+	chown $USER *
 
 	catkin init
-	catkin --extend /opt/ros/noetic
+	catkin config --extend /opt/ros/noetic
 
 	wstool init src
 
-	cd ~
+	cd $USER_HOME
 else
 	echo "Catkin already installed. Skipping...."
 fi
@@ -141,10 +142,10 @@ fi
 
 #---------------------------------------------------#
 # Setup Install MAVROS
-if ! (cd /home/$USER/catkin_ws/; catkin list -u) | grep -q mavros
+if ! (cd $USER_HOME/catkin_ws/; catkin list -u) | grep -q mavros
 then
-	echo "Installing mavros..."
-	cd ~/catkin_ws
+	echo "Installing mavros...."
+	cd $USER_HOME/catkin_ws
 
 	apt-get install ros-noetic-mavros ros-noetic-mavros-extras -y
 
@@ -157,12 +158,13 @@ then
 
 	rosdep install --rosdistro noetic --from-paths src --ignore-src -y
 
-	sudo ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
-
-	catkin build
+	./$USER_HOME/catkin_ws/src/mavros/mavros/scripts/install_geographiclib_datasets.sh
+	
+	echo "Catkin build...."
+	catkin build --no-status
 	source devel/setup.bash
 
-	cd ~
+	cd $USER_HOME
 else
 	echo "Mavros already installed. Skipping...."
 fi
@@ -171,11 +173,11 @@ fi
 #---------------------------------------------------#
 # Setup Install PX4 Autopilot
 #TODO check that the correct version has been checked out
-if ! (cd /home/$USER/catkin_ws/; catkin list -u) | grep -q px4
+if ! (cd $USER_HOME/catkin_ws/; catkin list -u) | grep -q px4
 # if [ ! -d /home/usr/vagrant/catkin_ws/src/PX4-Autopilot ]
 then
 	echo "Installing PX4..."
-	cd ~/catkin_ws/src
+	cd $USER_HOME/catkin_ws/src
 	git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git -b $PX4_VERSION --recursive
 	cd PX4-Autopilot/
 
@@ -185,11 +187,12 @@ then
 	# Compile PX4 for SITL
 	DONT_RUN=1 make px4_sitl_default gazebo
 
-	cd ~/catkin_ws
-	catkin build
+	echo "Catkin build...."
+	cd $USER_HOME/catkin_ws
+	catkin build --no-status
 	source devel/setup.bash
 
-	cd ~
+	cd $USER_HOME
 else
 	echo "PX4 already installed. Skipping...."
 fi
@@ -218,6 +221,8 @@ then
 	chmod +x QGC
 
 	source ~/.bashrc
+
+	cd $USER_HOME
 else
 	echo "QGroundControl already installed. Skipping...."
 fi
