@@ -83,8 +83,8 @@ then
 	apt-get install ros-noetic-desktop-full -y
 
 	# Setup ros enviroment in every new terminal
-	echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-	source ~/.bashrc
+	echo "source /opt/ros/noetic/setup.bash" >> $USER_HOME/.bashrc
+	source $USER_HOME/.bashrc
 
 	apt-get install python3-rosdep \
 				python3-rosinstall \
@@ -176,19 +176,18 @@ fi
 
 #---------------------------------------------------#
 # Setup Install PX4 Autopilot
-#TODO check that the correct version has been checked out
 if ! (cd $USER_HOME/catkin_ws/; catkin list -u) | grep -q px4
 # if [ ! -d /home/usr/vagrant/catkin_ws/src/PX4-Autopilot ]
 then
 	echo "Installing PX4..."
 	cd $USER_HOME/catkin_ws/src
-	git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git --recursive
-	# There ubuntu.sh script has not been updated in the latest stable release
+	#NOTE: This should not just be master but we need to wait for the next 
+	# stable release for ubuntu.sh fix to be implemented
+	git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+	
 	# git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git -b $PX4_VERSION --recursive
 	
 	cd PX4-Autopilot/
-
-	apt-get install gazebo9 libgazebo9-dev -y
 
 	# Install dependencies
 	. Tools/setup/ubuntu.sh
@@ -201,7 +200,7 @@ then
 	catkin build --no-status
 	source devel/setup.bash
 
-	chown -R $USER $USER_HOME/catkin_ws/*
+	chown -R $USER src/PX4-Autopilot/
 
 	cd $USER_HOME
 else
@@ -231,7 +230,7 @@ then
 	ln -s QGroundControl.AppImage QGC
 	chmod +x QGC
 
-	source ~/.bashrc
+	source $USER_HOME/.bashrc
 
 	cd $USER_HOME
 else
@@ -249,6 +248,8 @@ then
 
 	echo "Installing gitkraken..."
 	dpkg -i gitkraken-amd64.deb
+
+	rm gitkraken-amd64.deb
 else
 	echo "Git Kraken already installed. Skipping...."
 fi

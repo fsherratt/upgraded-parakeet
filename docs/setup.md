@@ -69,7 +69,10 @@ On windows you will need to disable hyper-v. Then in the start menu search for `
 
 - Login using the password `vagrant`
 
-- If everything has worked correctly you should now have a full screen virtual machine (you may need to log in and out) — Now go and make something awesome.
+
+If everything has worked correctly you should now have a full screen virtual machine (you may need to log in and out). To start and stop the virtual machine you can either use the virtualbox gui or vagrant in the command line.
+
+Now go and make something awesome.
 
 For next steps see — [Next Steps](#next)
 
