@@ -9,6 +9,8 @@ export PX4_VERSION=v1.11.3
 
 echo "Let's Go!!!"
 
+cd $USER_HOME
+
 #---------------------------------------------------#
 # Update local packages
 echo "Updating packages...."
@@ -127,7 +129,7 @@ then
 	cd $USER_HOME/catkin_ws/
 
 	mkdir build; mkdir devel; mkdir install; mkdir logs; mkdir src
-	chown $USER *
+	chown -R $USER *
 
 	catkin init
 	catkin config --extend /opt/ros/noetic
@@ -164,6 +166,8 @@ then
 	catkin build --no-status
 	source devel/setup.bash
 
+	chown -R $USER $USER_HOME/catkin_ws/*
+
 	cd $USER_HOME
 else
 	echo "Mavros already installed. Skipping...."
@@ -178,11 +182,16 @@ if ! (cd $USER_HOME/catkin_ws/; catkin list -u) | grep -q px4
 then
 	echo "Installing PX4..."
 	cd $USER_HOME/catkin_ws/src
-	git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git -b $PX4_VERSION --recursive
+	git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git --recursive
+	# There ubuntu.sh script has not been updated in the latest stable release
+	# git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git -b $PX4_VERSION --recursive
+	
 	cd PX4-Autopilot/
 
+	apt-get install gazebo9 libgazebo9-dev -y
+
 	# Install dependencies
-	bash ./Tools/setup/ubuntu.sh
+	. Tools/setup/ubuntu.sh
 
 	# Compile PX4 for SITL
 	DONT_RUN=1 make px4_sitl_default gazebo
@@ -191,6 +200,8 @@ then
 	cd $USER_HOME/catkin_ws
 	catkin build --no-status
 	source devel/setup.bash
+
+	chown -R $USER $USER_HOME/catkin_ws/*
 
 	cd $USER_HOME
 else
