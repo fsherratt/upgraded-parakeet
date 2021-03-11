@@ -69,6 +69,10 @@ On windows you will need to disable hyper-v. Then in the start menu search for `
 
 - Login using the password `vagrant`
 
+- Run the following command to disable screen blanking. When the screen goes black it's not possible to wake it.
+
+    `gsettings set org.gnome.desktop.session idle-delay 0`
+
 
 If everything has worked correctly you should now have a full screen virtual machine (you may need to log in and out). To start and stop the virtual machine you can either use the virtualbox gui or vagrant in the command line.
 
