@@ -1,22 +1,32 @@
 #!/usr/bin/env bash
-
-# Actions in this file must be Idempotent - i.e. if run a second time they don't fuck things up
-
-# Update local packages
-export USER=vagrant
-export USER_HOME=/home/$USER
-export PX4_VERSION=v1.11.3
+# This file sets up the vagrant virtual machine enviroment installing
+# all the required depedencies. Actions in this file must be idempotent 
+# - i.e. if run a second time they don't fuck things up
 
 echo "Let's Go!!!"
 
+#---------------------------------------------------#
+# File paramaters
+export USER=vagrant
+
+export PX4_VERSION=v1.11.3
+export REALSENSE_VERSION=v2.42.0
+
+
+#---------------------------------------------------#
+# Setup
+export USER_HOME=/home/$USER
 cd $USER_HOME
+
 
 #---------------------------------------------------#
 # Update local packages
 echo "Updating packages...."
 apt-get update
 apt-get upgrade -y
-apt-get autoremove -y
+
+# Make sure the latest kernel is installed - required for D435 realsense
+apt-get install linux-generic linux-image-generic
 
 #---------------------------------------------------#
 #Install TMUX and VIM
@@ -29,6 +39,7 @@ else
 	echo "Vim already installed. Skipping..."
 fi
 
+
 #---------------------------------------------------#
 # If we cannot find the tmux command, install it
 if ! command -v tmux &> /dev/null
@@ -38,6 +49,7 @@ then
 else
 	echo "Tmux installed. Skipping...."
 fi
+
 
 #---------------------------------------------------#
 # install GNOME desktop env
@@ -53,6 +65,7 @@ fi
 
 # TODO Add colcon_cd to shell. This will be decided when we decide where this will go.
 
+
 #---------------------------------------------------#
 # Setup python 3
 # If we cannot find the pip3 command, install it
@@ -64,6 +77,7 @@ then
 else
 	echo "Python and pip installed. Skipping..."
 fi
+
 
 #---------------------------------------------------#
 # Setup ROS Noetic
@@ -98,6 +112,7 @@ else
 	echo "ROS Noetic installed. Skipping...."
 fi
 
+
 #---------------------------------------------------#
 # Add ROS source to bashrc
 #NOTE THIS ONLY WORKS FOR NOETIC
@@ -106,11 +121,12 @@ if ! grep -q noetic $USER_HOME/.bashrc
 then
 	echo "Adding ros noetic to "$USER" .bashrc..."
 	echo "source /opt/ros/noetic/setup.bash" >> $USER_HOME/.bashrc 
-	source $USER_HOME/.bashrc 
+	source $USER_HOME/.bashrc
 
 elsecd /home
 	echo "Bash scripts already contains source for noetic ros. Skipping.."
 fi
+
 
 #---------------------------------------------------#
 # Setup Catkin
@@ -136,9 +152,11 @@ then
 
 	wstool init src
 
+	source $USER_HOME/.bashrc
+
 	cd $USER_HOME
 else
-	echo "Catkin already installed. Skipping...."
+	echo "Catkin already setup. Skipping...."
 fi
 
 
@@ -164,7 +182,7 @@ then
 	
 	echo "Catkin build...."
 	catkin build --no-status
-	source devel/setup.bash
+	source $USER_HOME/.bashrc
 
 	chown -R $USER $USER_HOME/catkin_ws/*
 
@@ -182,7 +200,7 @@ then
 	echo "Installing PX4..."
 	cd $USER_HOME/catkin_ws/src
 	#NOTE: This should not just be master but we need to wait for the next 
-	# stable release for ubuntu.sh fix to be implemented
+	# stable release for ubuntu.sh fix yet to be released
 	git clone https://github.com/PX4/PX4-Autopilot.git --recursive
 	
 	# git clone --depth 1 https://github.com/PX4/PX4-Autopilot.git -b $PX4_VERSION --recursive
@@ -198,7 +216,7 @@ then
 	echo "Catkin build...."
 	cd $USER_HOME/catkin_ws
 	catkin build --no-status
-	source devel/setup.bash
+	source $USER_HOME/.bashrc
 
 	chown -R $USER src/PX4-Autopilot/
 
@@ -209,8 +227,31 @@ fi
 
 
 #---------------------------------------------------#
-# Setup intel-realsense
+# Setup Intel-Realsense
+if  ! command -v realsense-viewer &> /dev/null 
+then
+	echo "Installing realsense...."
 
+	apt-key adv --keyserver keys.gnupg.net --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || \
+	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
+
+	add-apt-repository "deb http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo focal main" -u
+
+	apt-get update
+
+	apt-get install librealsense2-dkms -y
+	apt-get install librealsense2-utils -y
+	
+	pip3 install pyrealsense2
+
+	# ROS Setup
+	apt-get install ros-noetic-ddynmaic-reconfigure -y
+	apt-get install ros-noetic-realsense2-camera -y
+	apt-get install ros-noetic-realsense2-description -y
+
+else
+	echo "Intel realsense already installed. Skipping...."
+fi
 
 #---------------------------------------------------#
 # Setup open CV
