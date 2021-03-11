@@ -25,8 +25,12 @@ echo "Updating packages...."
 apt-get update
 apt-get upgrade -y
 
+# This is always useful
+apt-get install build-essential
+
 # Make sure the latest kernel is installed - required for D435 realsense
-apt-get install linux-generic linux-image-generic
+apt-get install linux-generic linux-image-generic -y
+
 
 #---------------------------------------------------#
 #Install TMUX and VIM
@@ -245,13 +249,14 @@ then
 	pip3 install pyrealsense2
 
 	# ROS Setup
-	apt-get install ros-noetic-ddynmaic-reconfigure -y
+	apt-get install ddynmaic-reconfigure -y
 	apt-get install ros-noetic-realsense2-camera -y
 	apt-get install ros-noetic-realsense2-description -y
 
 else
 	echo "Intel realsense already installed. Skipping...."
 fi
+
 
 #---------------------------------------------------#
 # Setup open CV
