@@ -232,6 +232,9 @@ fi
 
 #---------------------------------------------------#
 # Setup Intel-Realsense
+# Instructions from here - https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
+# And here - https://github.com/IntelRealSense/realsense-ros
+# If command realsense-viewer is found assume already installed
 if  ! command -v realsense-viewer &> /dev/null 
 then
 	echo "Installing realsense...."
@@ -286,7 +289,7 @@ fi
 
 #---------------------------------------------------#
 # Install Git kraken
-#If we can find the command for gitkraken, we have already installed it and so dont need to install it again.
+# If we can find the command for gitkraken, we have already installed it
 if ! command -v gitkraken &> /dev/null
 then
 	echo "Downloading gitkraken..."
@@ -303,6 +306,25 @@ fi
 
 #---------------------------------------------------#
 # Install VSCode
+# Instructions from here -https://code.visualstudio.com/docs/setup/linux
+# If we can find the command for code, we have already installed it
+if ! command -v code &> /dev/null
+then
+	echo "Installing VSCode..."
+	wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+	sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+
+	sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+
+	apt-get install apt-transport-https -y
+
+	apt-get update
+	apt-get install code -y
+
+	rm packages.microsoft.gpg
+else
+	echo "VSCode already installed. Skipping...."
+fi
 
 
 echo "All installed, You're ready to go"
