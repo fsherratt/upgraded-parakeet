@@ -11,6 +11,7 @@ export USER=vagrant
 
 export PX4_VERSION=v1.11.3
 export REALSENSE_VERSION=v2.42.0
+export OPENCV_VERSION=4.5.1
 
 
 #---------------------------------------------------#
@@ -262,7 +263,58 @@ fi
 
 
 #---------------------------------------------------#
-# Setup open CV
+# Setup OpenCV 4
+if [ ! -d /usr/local/include/opencv4 ]
+then
+	echo "Installing OpenCV...."
+	apt-get install -y \
+        pkg-config \
+        libswscale-dev \
+        libtbb2 \
+        libtbb-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libtiff-dev \
+        libavformat-dev \
+        libpq-dev \
+		libgtk2.0-dev \
+		libcanberra-gtk-module \
+		libcanberra-gtk3-module
+
+	cd $USER_HOME
+	echo "Downloading OpenCV "${OPENCV_VERSION}
+	wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip
+	unzip ${OPENCV_VERSION}.zip
+	cd opencv-${OPENCV_VERSION}
+
+	mkdir cmake_binary
+	cd cmake_binary
+
+	cmake -D CMAKE_BUILD_TYPE=RELEASE \
+		-D CMAKE_INSTALL_PREFIX=/usr/local \
+		-D OPENCV_ENABLE_NONFREE=ON \
+		-D BUILD_PERF_TESTS=OFF \
+		-D BUILD_TESTS=OFF \
+		-D BUILD_DOCS=OFF \
+		-D WITH_GTK=ON \
+		-D INSTALL_PYTHON_EXAMPLES=OFF \
+		-D BUILD_EXAMPLES=OFF \
+		-D WITH_TBB=ON \
+		-D WITH_OPENMP=ON \
+		-D INSTALL_C_EXAMPLES=OFF \
+		-D PYTHON_EXECUTABLE=$(which python3) \
+		..
+
+	make -j$(nproc)
+	make install
+	
+	cd $USER_HOME
+	rm ${OPENCV_VERSION}.zip
+
+	chown -R $USER opencv-${OPENCV_VERSION}
+else
+	echo "OpenCV already installed. Skipping...."
+fi
 
 
 #---------------------------------------------------#
