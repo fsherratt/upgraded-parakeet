@@ -71,7 +71,8 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--hwvirtex", "on"]
 
     # Set only graphics controller that works
-    vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
+    # vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
+    vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
 
     # Enable shared clipboard
     vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
@@ -83,26 +84,43 @@ Vagrant.configure("2") do |config|
 
     # Add 3D acceleration (requires guest additions to be installed)
     # vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+  end
 
-    # Add realsense USB devices
+
+  # Add USB devices
+
+  # From https://github.com/hashicorp/vagrant/issues/5774
+  def usbfilter_exists(vendor_id, product_id)
+    machine_id_filepath = ".vagrant/machines/default/virtualbox/id"
+
+    if not File.exists? machine_id_filepath
+      # VM hasn't been created yet.
+      return false
+    end
+
+    vm_info = `VBoxManage showvminfo $(<#{machine_id_filepath})`
+    filter_match = "VendorId:         #{vendor_id}\nProductId:        #{product_id}\n"
+    return vm_info.include? filter_match
+  end
+
+  def better_usbfilter_add(vb, vendor_id, product_id, filter_name)
+    if not usbfilter_exists(vendor_id, product_id)
+      vb.customize ["usbfilter", "add", "0",
+                    "--target", :id,
+                    "--name", filter_name,
+                    "--vendorid", vendor_id,
+                    "--productid", product_id
+                    ]
+    end
+  end
+  
+  config.vm.provider "virtualbox" do |vb|
     # D435
-    vb.customize ["usbfilter", "add", "0",
-        "--target", :id,
-        "--name", "Intel(R) RealSense(TM) Depth Camera D435",
-        "--product", "Intel(R) RealSense(TM) Depth Camera D435",
-        "--vendorid", "8086",
-        "--productid", "0B07"]
-
+    better_usbfilter_add(vb, "8086", "0B07", "Intel(R) RealSense(TM) Depth Camera D435")
     # T265
-    vb.customize ["usbfilter", "add", "1",
-      "--target", :id,
-      "--name", "Intel(R) RealSense(TM) Tracking Camera T265",
-      "--product", "Intel(R) RealSense(TM) Tracking Camera T265",
-      "--vendorid", "8087",
-      "--productid", "0B37"]
+    better_usbfilter_add(vb, "8087", "0B37", "Intel(R) RealSense(TM) Tracking Camera T265")
   end
 
   # View the documentation for the provider you are using for more
   # information on available options.
-
 end

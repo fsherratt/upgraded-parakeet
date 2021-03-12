@@ -183,7 +183,7 @@ then
 
 	rosdep install --rosdistro noetic --from-paths src --ignore-src -y
 
-	./$USER_HOME/catkin_ws/src/mavros/mavros/scripts/install_geographiclib_datasets.sh
+	. src/mavros/mavros/scripts/install_geographiclib_datasets.sh
 	
 	echo "Catkin build...."
 	catkin build --no-status
