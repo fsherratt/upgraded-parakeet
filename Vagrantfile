@@ -49,6 +49,9 @@ Vagrant.configure("2") do |config|
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
   # config.vm.synced_folder "../data", "/vagrant_data"
+  config.vm.synced_folder ".", "/home/vagrant/src", 
+    owner: "vagrant", 
+    create: true
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -81,8 +84,22 @@ Vagrant.configure("2") do |config|
     # Add 3D acceleration (requires guest additions to be installed)
     # vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
 
-    # Attach empty IDE slot for installing guest additions
-    # vb.customize ["storagectl", :id, "--name", "IDE Controller", "--add", "ide"]
+    # Add realsense USB devices
+    # D435
+    vb.customize ["usbfilter", "add", "0",
+        "--target", :id,
+        "--name", "Intel(R) RealSense(TM) Depth Camera D435",
+        "--product", "Intel(R) RealSense(TM) Depth Camera D435",
+        "--vendorid", "8086",
+        "--productid", "0B07"]
+
+    # T265
+    vb.customize ["usbfilter", "add", "1",
+      "--target", :id,
+      "--name", "Intel(R) RealSense(TM) Tracking Camera T265",
+      "--product", "Intel(R) RealSense(TM) Tracking Camera T265",
+      "--vendorid", "8087",
+      "--productid", "0B37"]
   end
 
   # View the documentation for the provider you are using for more
