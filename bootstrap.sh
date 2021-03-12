@@ -136,7 +136,7 @@ fi
 #---------------------------------------------------#
 # Setup Catkin
 #NOTE THIS IS A PRETTY WEAK WAY OF CHECKING CATKIN IS INSTALLED
-if [ ! -d $USER_HOME/catkin_ws ]
+if [ ! -d $USER_HOME/catkin_ws/build ]
 then
 	echo "Preparing catkin..."
 	
@@ -145,11 +145,11 @@ then
 					python3-rosinstall-generator -y
 	pip3 install osrf-pycommon
 	
-	mkdir $USER_HOME/catkin_ws/
+	mkdir -p $USER_HOME/catkin_ws/
 	chown $USER $USER_HOME/catkin_ws
 	cd $USER_HOME/catkin_ws/
 
-	mkdir build; mkdir devel; mkdir install; mkdir logs; mkdir src
+	mkdir -p build; mkdir -p devel; mkdir -p install; mkdir -p logs; mkdir -p src
 	chown -R $USER *
 
 	catkin init
