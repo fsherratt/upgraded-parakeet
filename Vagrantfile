@@ -19,6 +19,8 @@ Vagrant.configure("2") do |config|
   # documentation for more information about their specific syntax and use.
   config.vm.provision :shell, path: "bootstrap.sh"
 
+  config.vm.provision :shell, inline: "echo \"Install python\"; pip3 install -r /home/vagrant/catkin_ws/src/upgraded-parakeet/requirements.txt", run: "always"
+
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
