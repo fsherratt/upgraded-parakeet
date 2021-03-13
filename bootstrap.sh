@@ -128,7 +128,7 @@ then
 	echo "source /opt/ros/noetic/setup.bash" >> $USER_HOME/.bashrc 
 	source $USER_HOME/.bashrc
 
-elsecd /home
+else
 	echo "Bash scripts already contains source for noetic ros. Skipping.."
 fi
 
@@ -315,7 +315,6 @@ then
 else
 	echo "OpenCV already installed. Skipping...."
 fi
-
 
 #---------------------------------------------------#
 # Install QGroundControl
