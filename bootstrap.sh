@@ -26,12 +26,6 @@ echo "Updating packages...."
 apt-get update
 apt-get upgrade -y
 
-# This is always useful
-apt-get install build-essential
-
-# Make sure the latest kernel is installed - required for D435 realsense
-apt-get install linux-generic linux-image-generic -y
-
 
 #---------------------------------------------------#
 #Install TMUX and VIM
@@ -53,34 +47,6 @@ then
 	apt-get install tmux -y
 else
 	echo "Tmux installed. Skipping...."
-fi
-
-
-#---------------------------------------------------#
-# install GNOME desktop env
-# If dpkg does not list ubuntu desktop as installed, install it.
-if ! dpkg -s ubuntu-desktop-minimal &> /dev/null
-then
-	echo "Installing desktop env...."
-	apt-get install ubuntu-desktop-minimal -y
-	apt-get upgrade
-else
-	echo "Ubuntu desktop installed. Skipping...."
-fi
-
-# TODO Add colcon_cd to shell. This will be decided when we decide where this will go.
-
-
-#---------------------------------------------------#
-# Setup python 3
-# If we cannot find the pip3 command, install it
-if ! command -v pip3 &> /dev/null
-then
-	echo "Installing python3..."
-	apt-get install python3 -y
-	apt-get install python3-pip -y
-else
-	echo "Python and pip installed. Skipping..."
 fi
 
 
