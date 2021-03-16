@@ -65,16 +65,9 @@ On windows you will need to disable hyper-v. Then in the start menu search for `
 
     `vagrant reload`
 
-- In the virtual machine window click on the vagrant user, a gear icon should appear in the bottom right corner. Click the gear and select `Ubuntu on Wayland`
-
 - Login using the password `vagrant`
 
-- Run the following command to disable screen blanking. When the screen goes black it's not possible to wake it.
-
-    `gsettings set org.gnome.desktop.session idle-delay 0`
-
-
-If everything has worked correctly you should now have a full screen virtual machine (you may need to log in and out). To start and stop the virtual machine you can either use the virtualbox gui or vagrant in the command line.
+If everything has worked correctly you should now have a full screen virtual machine. To start and stop the virtual machine you can either use the virtualbox gui or vagrant in the command line.
 
 Now go and make something awesome.
 
