@@ -155,7 +155,7 @@ then
 	catkin build --no-status
 	source $USER_HOME/.bashrc
 
-	chown -R $USER $USER_HOME/catkin_ws/*
+	chown -R $USER $USER_HOME/catkin_ws
 
 	cd $USER_HOME
 else

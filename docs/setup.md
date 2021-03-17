@@ -67,7 +67,9 @@ On windows you will need to disable hyper-v. Then in the start menu search for `
 
 - Login using the password `vagrant`
 
-If everything has worked correctly you should now have a full screen virtual machine. To start and stop the virtual machine you can either use the virtualbox gui or vagrant in the command line.
+If everything has worked correctly you should now have a full screen virtual machine. To stop the virtual machine you can either use the GUI or run `vagrant halt` in the command line.
+
+In order for the mapped folders to work correctly you need to start the machine using `vagrant up`
 
 Now go and make something awesome.
 
@@ -84,7 +86,6 @@ The T265 is a bastard and changes it's enumerationa after connection, it can be 
 <!-- [<img src="images/set_usb_virtualbox_cropped.png" width="500"/>](images/set_usb_virtualbox.png) -->
 
 [<img src="images/Connect_Realsense_VirtualBox.png" width="500"/>](images/Connect_Realsense_VirtualBox.png)
-
 
 # <a name="next"></a>Next Steps
 Now you have a working development enviroment setup you can follow the other documentation to get started with the project.
