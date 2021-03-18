@@ -3,6 +3,18 @@
 # all the required depedencies. Actions in this file must be idempotent 
 # - i.e. if run a second time they don't fuck things up
 
+
+#---------------------------------------------------#
+echo "                               "
+echo "  _______  ____   _____        "
+echo " |__   __||  _ \ |  __ \       "
+echo "    | |   | |_) || |  | | _ __ "
+echo "    | |   |  _ < | |  | ||  __|"
+echo "    | |   | |_) || |__| || |   "
+echo "    |_|   |____/ |_____/ |_|   "
+echo "                               "
+echo "    TeamBathDrone Research     "
+echo "                               "
 echo "Let's Go!!!"
 
 #---------------------------------------------------#
