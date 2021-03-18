@@ -316,6 +316,25 @@ else
 	echo "OpenCV already installed. Skipping...."
 fi
 
+
+#---------------------------------------------------#
+# Install Octomap
+if ! rospack list-names | grep -q octomap
+then
+	echo "Installing OctoMap...."
+	apt-get install -y octomap-tools \
+					octovis \
+					ros-noetic-octomap \
+					ros-noetic-octomap-msgs \
+					ros-noetic-octomap-mapping \
+					ros-noetic-octomap-server \
+					ros-noetic-octovis
+	
+else
+	echo ""
+fi
+
+
 #---------------------------------------------------#
 # Install QGroundControl
 #NOTE this is a pretty weak check of installation
