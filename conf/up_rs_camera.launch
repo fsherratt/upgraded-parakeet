@@ -1,0 +1,62 @@
+<!-- https://github.com/IntelRealSense/realsense-ros/blob/development/realsense2_camera/launch/rs_d400_and_t265.launch -->
+<launch>  
+  <arg name="device_type_depth"	default="d4.5"/>
+  <arg name="device_type_pose"		default="t265"/>
+  <arg name="camera_depth"              default="d400"/>
+  <arg name="camera_pose"              	default="t265"/>
+
+  <arg name="initial_reset"             default="false"/>
+  <arg name="depth_width"               default="640"/>
+  <arg name="depth_height"              default="360"/>
+  <!-- emove from the depth image all values above a given value (meters). Disable by giving negative value (default) -->
+  <arg name="clip_distance"             default="10"/>
+
+  <arg name="color_width"               default="640"/>
+  <arg name="color_height"              default="480"/>
+
+  <!-- Depth -->
+  <group ns="$(arg camera_depth)">
+    <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+      <arg name="device_type"       value="$(arg device_type_depth)"/>
+      <arg name="tf_prefix"         value="$(arg camera_depth)"/>
+      <arg name="initial_reset"     value="$(arg initial_reset)"/>
+
+      <!-- /d400/depth/... -->
+      <arg name="enable_depth"      value="true"/>
+      <arg name="depth_width"       value="$(arg depth_width)"/>
+      <arg name="depth_height"      value="$(arg depth_height)"/>
+      <arg name="depth_fps"         value="15"/>
+      <arg name="clip_distance"     value="$(arg clip_distance)"/>
+      
+      <!-- /d400/color/... -->
+      <arg name="enable_color"      value="true"/>
+      <arg name="color_width"       value="$(arg color_width)"/>
+      <arg name="color_height"      value="$(arg color_height)"/>
+      <arg name="color_fps"         value="15"/>
+
+      <arg name="filters"           value="decimation"/>
+
+      <arg name="enable_pointcloud" value="true"/>
+      <arg name="pointcloud_texture_stream" default="RS2_STREAM_ANY"/> 
+      
+    </include>
+  </group>
+
+  <!-- T265 -->
+  <group ns="$(arg camera_pose)">
+    <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+      <arg name="device_type"       value="$(arg device_type_pose)"/>
+      <arg name="tf_prefix"         value="$(arg camera_pose)"/>
+      <arg name="initial_reset"     value="$(arg initial_reset)"/>
+
+      <!-- /t265/odom/sample -->
+      <arg name="enable_pose"       value="true"/>      
+    </include>
+  </group>
+
+  <!-- Link D400 to T265 pose - 45 deg around y -->
+  <node pkg="tf" type="static_transform_publisher" name="base_map" args="0 0 0 0 0 3.14159 base_link map 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="map_to_t265" args="0 0 0 0 0 0 map /$(arg camera_pose)_odom_frame 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="t265_to_uav" args="0 0 0 0 -0.78539816 0 /$(arg camera_pose)_link uav 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="t265_to_d400" args="0 0 0 0 0 0 uav /$(arg camera_depth)_link 100"/>
+</launch>
