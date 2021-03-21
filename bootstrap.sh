@@ -316,20 +316,21 @@ else
 	echo "OpenCV already installed. Skipping...."
 fi
 
-
 #---------------------------------------------------#
-# Install Octomap
+# Install Octomap and TF2 - Transforms
 if ! rospack list-names | grep -q octomap
 then
 	echo "Installing OctoMap...."
 	apt-get install -y octomap-tools \
-					octovis \
-					ros-noetic-octomap \
-					ros-noetic-octomap-msgs \
-					ros-noetic-octomap-mapping \
-					ros-noetic-octomap-server \
-					ros-noetic-octovis
-	
+		octovis \
+		ros-noetic-octomap \
+		ros-noetic-octomap-msgs \
+		ros-noetic-octomap-mapping \
+		ros-noetic-octomap-server \
+		ros-noetic-octovis \
+		ros-noetic-octomap-rviz-plugins
+		ros-noetic-tf2-tools \
+		ros-noetic-tf
 else
 	echo ""
 fi
