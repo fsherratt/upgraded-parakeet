@@ -54,9 +54,10 @@
     </include>
   </group>
 
-  <!-- Link D400 to T265 pose - 45 deg around y -->
-  <node pkg="tf" type="static_transform_publisher" name="base_map" args="0 0 0 0 0 3.14159 base_link map 100"/>
-  <node pkg="tf" type="static_transform_publisher" name="map_to_t265" args="0 0 0 0 0 0 map /$(arg camera_pose)_odom_frame 100"/>
+  <!-- Provide both FRD and FLU frames -->
+  <node pkg="tf" type="static_transform_publisher" name="base_map" args="0 0 0 0 0 3.14159 base_FRD base_FLU 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="map_to_t265" args="0 0 0 0 0 0 base_FRL /$(arg camera_pose)_odom_frame 100"/>
+  <!-- Link T265 to UAV - including 45 deg twist in y -->
   <node pkg="tf" type="static_transform_publisher" name="t265_to_uav" args="0 0 0 0 -0.78539816 0 /$(arg camera_pose)_link uav 100"/>
   <node pkg="tf" type="static_transform_publisher" name="t265_to_d400" args="0 0 0 0 0 0 uav /$(arg camera_depth)_link 100"/>
 </launch>
