@@ -1,0 +1,47 @@
+http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/PointCloud2.html
+http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/PointField.html
+https://answers.ros.org/question/273182/trying-to-understand-pointcloud2-msg/
+https://answers.ros.org/question/202787/using-pointcloud2-data-getting-xy-points-in-python/
+https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
+https://github.com/fsherratt/upgraded-parakeet/blob/old/devel/docs/realsense.md
+https://github.com/IntelRealSense/librealsense/blob/28c404a419ebab98d2ee93615776e8cefb46a340/doc/depth-from-stereo.md
+
+header: 
+  seq: 924
+  stamp: 
+    secs: 1619360159
+    nsecs: 515909195
+  frame_id: "camera_depth_optical_frame"
+height: 1
+width: 146522
+fields: 
+  - 
+    name: "x"
+    offset: 0
+    datatype: 7
+    count: 1
+  - 
+    name: "y"
+    offset: 4
+    datatype: 7
+    count: 1
+  - 
+    name: "z"
+    offset: 8
+    datatype: 7
+    count: 1
+  - 
+    name: "rgb"
+    offset: 16
+    datatype: 7
+    count: 1
+is_bigendian: False
+point_step: 20
+row_step: 2930440
+data: [
+100, 57, 59, 191, X?
+52, 20, 104, 191, Y?
+58, 180, 16, 64,  Z?
+0, 0, 0, 0,       RGB?
+
+100, 111, 110, 0, 133, 70, 57, 191, 68, 92, 103, 191,
